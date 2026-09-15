@@ -38,20 +38,19 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <nav class="view-switch" aria-label="Nội dung"><button data-view="schedule" aria-pressed="true" aria-controls="schedule">Thời khóa biểu</button><button data-view="checklist" aria-pressed="false" aria-controls="checklist">Việc mỗi ngày</button></nav>
 </header>
 <section id="schedule" aria-labelledby="schedule-title">
-<div class="toolbar"><div><h2 id="schedule-title">Lịch học trong tuần</h2><div class="legend"><span><i class="dot" aria-hidden="true"></i>Ở trường</span><span><i class="dot extra" aria-hidden="true"></i>Học thêm</span></div></div><div class="filters" role="group" aria-label="Lọc lịch học"><button data-filter="all" aria-pressed="true">Tất cả</button><button data-filter="school" aria-pressed="false">Ở trường</button><button data-filter="extra" aria-pressed="false">Học thêm</button></div></div>
+<div class="panel-toolbar"><h2 id="schedule-title">Lịch học trong tuần</h2><div class="filters" role="group" aria-label="Lọc lịch học"><button data-filter="all" aria-pressed="true">Tất cả</button><button data-filter="school" aria-pressed="false">Ở trường</button><button data-filter="extra" aria-pressed="false">Học thêm</button></div></div><div class="legend panel-meta"><span><i class="dot" aria-hidden="true"></i>Ở trường</span><span><i class="dot extra" aria-hidden="true"></i>Học thêm</span></div>
 <div id="week" class="week"></div>
 <noscript><p>Vui lòng bật JavaScript để xem thời khóa biểu.</p></noscript>
 </section>
 <section id="checklist" aria-labelledby="checklist-title" hidden>
-<div class="checklist-toolbar"><div><h2 id="checklist-title">Việc mỗi ngày</h2><p id="checklist-person"></p></div>
-<div class="date-controls"><button data-date-step="-1" aria-label="Ngày trước">←</button><div class="date-field"><label for="checklist-date">Ngày thực hiện</label><input id="checklist-date" type="date" required></div><button data-date-step="1" aria-label="Ngày sau">→</button><button id="checklist-today">Hôm nay</button></div></div>
-<p id="checklist-date-note" class="storage-note"></p>
-<div id="checklist-progress" class="checklist-progress"><strong id="checklist-count"></strong><span id="checklist-remaining"></span></div>
+<div class="panel-toolbar"><h2 id="checklist-title">Việc mỗi ngày</h2>
+<div class="date-controls"><button data-date-step="-1" aria-label="Ngày trước">←</button><div class="date-field"><label class="sr-only" for="checklist-date">Ngày thực hiện</label><input id="checklist-date" type="date" required></div><button data-date-step="1" aria-label="Ngày sau">→</button><button id="checklist-today">Hôm nay</button></div></div>
+<div id="checklist-progress" class="checklist-progress panel-meta"><strong id="checklist-count"></strong></div>
 <p id="checklist-error" class="checklist-alert" role="alert"></p>
 <p id="checklist-feedback" class="sr-only" role="status" aria-live="polite"></p>
 <div class="checklist-columns">
-<section class="task-group" aria-labelledby="common-title"><h3 id="common-title">Việc chung</h3><p class="task-group-description">Một bạn hoàn thành là xong cho cả hai. Việc đã xong được khóa và ghi tên bạn đã làm.</p><ul id="common-tasks" class="task-list"></ul></section>
-<section class="task-group" aria-labelledby="private-title"><h3 id="private-title">Việc riêng</h3><p class="task-group-description">Mỗi bạn tự hoàn thành các việc của mình.</p><ul id="private-tasks" class="task-list"></ul></section>
+<section class="task-group" aria-labelledby="common-title"><h3 id="common-title">Việc chung</h3><ul id="common-tasks" class="task-list"></ul></section>
+<section class="task-group" aria-labelledby="private-title"><h3 id="private-title">Việc riêng</h3><ul id="private-tasks" class="task-list"></ul></section>
 </div>
 </section>
 <footer><span id="student-footer">Nguyễn Thanh Khôi · Lớp 6.7</span><span>Một tuần học tập thật tốt!</span></footer>

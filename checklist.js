@@ -53,10 +53,7 @@
   const student = students[selectedStudent];
   const editable = selectedDate===today() && currentViewer===selectedStudent;
   byId('checklist-date').value = selectedDate;
-  byId('checklist-person').textContent = student.name;
   byId('private-title').textContent = `Việc riêng · ${student.name.replace('Nguyễn ','')}`;
-  byId('checklist-date-note').hidden=currentViewer==='parents';
-  byId('checklist-date-note').textContent = currentViewer==='parents' ? '' : editable ? 'Hôm nay · Việc chung đã xong được khóa. Việc riêng có thể bỏ dấu tích nếu chọn nhầm.' : 'Lịch sử theo ngày · Chỉ đánh dấu và sửa việc trong ngày hôm nay.';
   const total=taskGroups().reduce((sum,[,,tasks])=>sum+tasks.length,0);
   let completed=0, storageFailed=false;
   for (const [listId,owner,tasks] of taskGroups()) {
@@ -94,11 +91,9 @@
   }
   byId('checklist-progress').classList.toggle('complete',completed===total);
   byId('checklist-count').textContent=`${completed}/${total} việc đã xong`;
-  byId('checklist-remaining').textContent=completed===total?'Đã hoàn thành tất cả!':`Còn ${total-completed} việc chưa xong`;
   if (storageFailed) {
    byId('checklist-error').textContent='Không đọc được một số dữ liệu trên trình duyệt. Hãy cho phép lưu dữ liệu rồi tải lại; các mục lỗi chưa được thay đổi.';
    byId('checklist-count').textContent='Chưa đọc đủ dữ liệu';
-   byId('checklist-remaining').textContent='Không thể xác định đầy đủ số việc còn lại.';
   }
  }
  function rollDate() {

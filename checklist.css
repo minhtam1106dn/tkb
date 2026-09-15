@@ -8,3 +8,8 @@
 @media print{.viewer-bar,#viewer-dialog{display:none}}
 
 .no-homework{margin:0 12px 12px 46px;min-height:44px;font-size:13px;color:var(--blue);border-color:var(--blue);max-width:calc(100% - 58px)}
+
+/* Both views share the same title, controls and metadata rows. */
+html{scrollbar-gutter:stable}.panel-toolbar{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:12px;margin:0 0 12px}.panel-toolbar h2{line-height:1.5}.panel-toolbar .filters{min-height:44px;align-items:center}.panel-toolbar .date-controls{display:grid;grid-template-columns:44px minmax(0,1fr) 44px auto;gap:8px;width:100%;align-items:center}.panel-toolbar .date-field{min-width:0;display:block}.panel-toolbar .date-field input{width:100%;height:44px}.panel-toolbar .date-controls button{padding:10px;white-space:nowrap;height:44px}.panel-meta{display:flex;min-height:32px;align-items:center;margin:0 0 16px;gap:16px}.panel-meta strong{line-height:20px}.task-group h3{margin-bottom:16px}
+@media(min-width:850px){.panel-toolbar{grid-template-columns:minmax(0,1fr) auto}.panel-toolbar .date-controls{width:350px}}
+#schedule .panel-meta,#checklist .panel-meta{margin:0 0 16px}
