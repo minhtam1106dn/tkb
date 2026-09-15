@@ -5,13 +5,18 @@
   ['floor-2','Quét nhà tầng 2'], ['leaves','Lượm lá trước sân'],
   ['trash','Vứt rác'], ['plants','Tưới cây'], ['table','Lau bàn'],
   ['uniform','Giặt đồ đi học'], ['laundry','Phơi đồ trên tầng 3'],
-  ['bath','Tắm rửa'], ['stairs','Lượm rác cầu thang'], ['fish','Cho cá ăn']
+  ['stairs','Lượm rác cầu thang'], ['fish','Cho cá ăn']
  ];
  const privateTasks = [
+  ['bath','Tắm rửa'],
   ['school-homework','Làm bài tập trên trường'], ['extra-homework','Làm bài tập học thêm'],
   ['sm-homework','Làm bài tập ở SM'], ['prepare','Soạn thời khóa biểu']
  ];
- function taskGroups() { return [['common-tasks','shared',commonTasks],['private-tasks',selectedStudent,privateTasks]]; }
+ const optionalTasks=new Set(['extra-homework','sm-homework']);
+ function taskGroups() {
+  const personal=privateTasks.filter(([id])=>selectedStudent!=='nhan' || id!=='extra-homework');
+  return [['common-tasks','shared',commonTasks],['private-tasks',selectedStudent,personal]];
+ }
  const prefix = 'tkb-checklist:v1:';
  const zone = 'Asia/Ho_Chi_Minh';
  const dateFormat = new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'});
@@ -50,7 +55,9 @@
   byId('checklist-date').value = selectedDate;
   byId('checklist-person').textContent = student.name;
   byId('private-title').textContent = `Việc riêng · ${student.name.replace('Nguyễn ','')}`;
-  byId('checklist-date-note').textContent = currentViewer==='parents' ? 'Ba Mẹ đang xem tiến độ. Chọn Thanh Khôi hoặc Thanh Nhân ở phía trên để xem từng bạn.' : editable ? 'Hôm nay · Việc chung đã xong được khóa. Việc riêng có thể bỏ dấu tích nếu chọn nhầm.' : 'Lịch sử theo ngày · Chỉ đánh dấu và sửa việc trong ngày hôm nay.';
+  byId('checklist-date-note').hidden=currentViewer==='parents';
+  byId('checklist-date-note').textContent = currentViewer==='parents' ? '' : editable ? 'Hôm nay · Việc chung đã xong được khóa. Việc riêng có thể bỏ dấu tích nếu chọn nhầm.' : 'Lịch sử theo ngày · Chỉ đánh dấu và sửa việc trong ngày hôm nay.';
+  const total=taskGroups().reduce((sum,[,,tasks])=>sum+tasks.length,0);
   let completed=0, storageFailed=false;
   for (const [listId,owner,tasks] of taskGroups()) {
    const list = byId(listId);
@@ -72,14 +79,22 @@
     checkbox.setAttribute('aria-describedby',status.id);
     if (record) {
      const time=document.createElement('time');time.dateTime=record.completedAt;time.textContent=timeFormat.format(new Date(record.completedAt));
-     status.append('Đã xong · ',time,` · ${students[record.completedBy].name.replace('Nguyễn ','')}${locked?' · Đã khóa':''}`);
+     status.append(record.note==='không có'?'Đã xong · Không có · ':'Đã xong · ',time,` · ${students[record.completedBy].name.replace('Nguyễn ','')}${locked?' · Đã khóa':''}`);
     } else status.textContent=readFailed?'Không đọc được trạng thái đã lưu':(selectedDate>today()?'Chưa đến ngày thực hiện':'Chưa xong');
-    copy.append(title,status);label.append(checkbox,copy);row.append(label);list.append(row);
+    copy.append(title,status);label.append(checkbox,copy);row.append(label);
+    if(owner!=='shared' && optionalTasks.has(id) && !record && editable && !readFailed){
+     const noHomework=document.createElement('button');
+     noHomework.type='button';noHomework.className='no-homework';noHomework.textContent='Không có';
+     noHomework.dataset.noHomework=id;noHomework.dataset.owner=owner;noHomework.dataset.task=id;
+     noHomework.setAttribute('aria-label',`${name}: không có bài tập hôm nay, đánh dấu đã xong`);
+     row.append(noHomework);
+    }
+    list.append(row);
    }
   }
-  byId('checklist-progress').classList.toggle('complete',completed===16);
-  byId('checklist-count').textContent=`${completed}/16 việc đã xong`;
-  byId('checklist-remaining').textContent=completed===16?'Đã hoàn thành tất cả!':`Còn ${16-completed} việc chưa xong`;
+  byId('checklist-progress').classList.toggle('complete',completed===total);
+  byId('checklist-count').textContent=`${completed}/${total} việc đã xong`;
+  byId('checklist-remaining').textContent=completed===total?'Đã hoàn thành tất cả!':`Còn ${total-completed} việc chưa xong`;
   if (storageFailed) {
    byId('checklist-error').textContent='Không đọc được một số dữ liệu trên trình duyệt. Hãy cho phép lưu dữ liệu rồi tải lại; các mục lỗi chưa được thay đổi.';
    byId('checklist-count').textContent='Chưa đọc đủ dữ liệu';
@@ -92,15 +107,13 @@
   if(selectedDate===lastToday) selectedDate=next;
   lastToday=next;renderChecklist();return true;
  }
- byId('checklist').addEventListener('change',async event=>{
-  const input=event.target;
-  if(!input.matches('input[data-task]'))return;
+ async function saveTask(input,checked,note){
   if(rollDate() || selectedDate!==today() || currentViewer!==selectedStudent){renderChecklist();return;}
   const owner=input.dataset.owner,id=input.dataset.task;
   const group=taskGroups().find(([,candidate])=>candidate===owner);
   const task=group?.[2].find(([candidate])=>candidate===id);
-  if(!task){renderChecklist();return;}
-  const actor=currentViewer,day=selectedDate,checked=input.checked;
+  if(!task || (note && (owner==='shared' || !optionalTasks.has(id)))){renderChecklist();return;}
+  const actor=currentViewer,day=selectedDate;
   const key=keyFor(owner,id);
   input.disabled=true;
   byId('checklist-error').textContent='';
@@ -113,9 +126,9 @@
      byId('checklist-feedback').textContent=`${task[1]} đã hoàn thành, không thể đánh dấu lại.`;
      return;
     }
-    if(checked && !existing) localStorage.setItem(key,JSON.stringify({completedAt:new Date().toISOString(),completedBy:actor}));
+    if(checked && !existing) localStorage.setItem(key,JSON.stringify({completedAt:new Date().toISOString(),completedBy:actor,...(note?{note}:{})}));
     else if(!checked && owner!=='shared') localStorage.removeItem(key);
-    byId('checklist-feedback').textContent=`${task[1]}: ${checked?'đã lưu hoàn thành':'đã bỏ đánh dấu'}.`;
+    byId('checklist-feedback').textContent=`${task[1]}: ${checked?(note?'đã lưu hoàn thành, không có bài tập':'đã lưu hoàn thành'):'đã bỏ đánh dấu'}.`;
    };
    if(navigator.locks)await navigator.locks.request(key,write);
    else write();
@@ -128,6 +141,13 @@
    if(control && !control.disabled)control.focus({preventScroll:true});
    else if(control){const row=control.closest('li');row.tabIndex=-1;row.focus({preventScroll:true});}
   }
+ }
+ byId('checklist').addEventListener('change',event=>{
+  if(event.target.matches('input[data-task]'))saveTask(event.target,event.target.checked);
+ });
+ byId('checklist').addEventListener('click',event=>{
+  const button=event.target.closest('button[data-no-homework]');
+  if(button && !button.disabled)saveTask(button,true,'không có');
  });
  byId('checklist-date').addEventListener('change',event=>{
   const value=event.target.value;
@@ -146,5 +166,22 @@
  setInterval(rollDate,30000);
  window.renderChecklist=renderChecklist;
  try{if(localStorage.getItem('tkb-view')==='checklist')selectedView='checklist';}catch(_){}
+ try {
+  for(const key of Object.keys(localStorage)){
+   const match=key.match(/^tkb-checklist:v1:(\d{4}-\d{2}-\d{2}):shared:bath$/);
+   if(!match)continue;
+   const raw=localStorage.getItem(key),record=JSON.parse(raw);
+   if(!record || !Object.hasOwn(students,record.completedBy) || !Number.isFinite(Date.parse(record.completedAt)))continue;
+   const archive=`tkb-checklist:legacy-bath:v1:${match[1]}`;
+   if(!localStorage.getItem(archive)){
+    const personal=`${prefix}${match[1]}:${record.completedBy}:bath`;
+    if(!localStorage.getItem(personal))localStorage.setItem(personal,raw);
+    localStorage.setItem(archive,raw);
+   }
+   localStorage.removeItem(key);
+  }
+ } catch (_) {
+  byId('checklist-error').textContent='Chưa chuyển được một số lịch sử tắm rửa. Dữ liệu cũ vẫn được giữ; hãy kiểm tra quyền lưu dữ liệu rồi tải lại.';
+ }
  setView(selectedView);
 })();
