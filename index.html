@@ -7,16 +7,17 @@
 <link rel="icon" type="image/jpeg" href="./images.jpeg">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-<meta name="apple-mobile-web-app-title" content="TKB Khôi">
+<meta name="apple-mobile-web-app-title" content="TKB hai anh em">
 <title>Thời khóa biểu · Nguyễn Thanh Khôi</title>
 <style>
 :root{color-scheme:light;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--bg:#f6f8fc;--paper:#fff;--text:#17243b;--muted:#53627a;--line:#dde4ee;--blue:#2455b5;--blue-bg:#edf3ff;--purple:#7140a1;--purple-bg:#f5effc;--radius:18px;color:var(--text);background:var(--bg)}
 *{box-sizing:border-box}body{margin:0;line-height:1.5}button{font:inherit;cursor:pointer;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:10px 16px;background:var(--paper);color:var(--text);font-weight:600;transition:background .18s,border-color .18s}button:hover{background:var(--blue-bg);border-color:var(--blue)}button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:4px}button:active{background:var(--line)}button[aria-pressed=true]{background:var(--text);color:white;border-color:var(--text)}.wrap{width:min(1500px,100%);margin:auto;padding:24px 16px 32px}.topline{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}.mark{width:32px;height:32px;display:grid;place-items:center;background:var(--blue);border-radius:9px;color:#fff}.mark svg{width:20px;height:20px}header{padding:12px 0 26px}.heading{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap}h1{font-size:clamp(30px,4vw,46px);line-height:1.2;letter-spacing:-.04em;margin:18px 0 10px}h1 span{display:block;font-size:16px;letter-spacing:0;font-weight:500;color:var(--muted);margin-bottom:9px}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}h2{font-size:22px;letter-spacing:-.025em;margin:0}.filters{display:flex;gap:8px;flex-wrap:wrap}.filters button{font-size:14px}.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin:8px 0 0}.legend span{display:flex;align-items:center;gap:6px}.dot{width:8px;height:8px;border-radius:50%;background:var(--blue)}.dot.extra{background:var(--purple)}.week{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}.day{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;min-width:0}.day.today{border:2px solid var(--blue)}.day-head{padding:15px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:#fafbfd}.today .day-head{background:var(--blue-bg)}.day-head h3{margin:0;font-size:18px}.today-badge{font-size:11px;font-weight:700;color:var(--blue);background:var(--paper);border-radius:6px;padding:4px 7px}.group{padding:14px 12px 0}.group:last-child{padding-bottom:14px}.group-title{margin:0 0 9px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}.extra-group .group-title{color:var(--purple)}.periods,.lessons{list-style:none;margin:0;padding:0}.periods li{display:flex;gap:9px;padding:8px 3px;border-bottom:1px solid #eef1f6;align-items:baseline}.periods li:last-child{border:0}.period-number{font-size:12px;color:var(--muted);width:16px;flex-shrink:0;font-variant-numeric:tabular-nums}.subject{font-size:14px;font-weight:650;overflow-wrap:anywhere}.teacher{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:1px}.lessons li{border-radius:10px;background:var(--purple-bg);border-left:3px solid var(--purple);padding:10px;margin-top:8px}.lessons time{display:block;color:var(--purple);font-weight:650;font-size:12px;font-variant-numeric:tabular-nums;margin-bottom:3px}.empty{color:var(--muted);font-size:13px;margin:0;padding:10px 0}footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:22px;font-size:12px;color:var(--muted)}[hidden]{display:none!important}.skip{position:absolute;left:16px;top:-100px;background:white;padding:12px;z-index:5}.skip:focus{top:10px}
+h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.students button{flex:1;max-width:180px}.students button[aria-pressed=true]{background:var(--blue);border-color:var(--blue)}
 @media(min-width:500px){.week{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(min-width:850px){.wrap{padding:32px}.week{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(min-width:1280px){.week{grid-template-columns:repeat(6,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
-@media print{@page{size:A4 landscape;margin:9mm}:root{--bg:white}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.wrap{width:100%;padding:0}.filters,.skip,footer{display:none}header{padding:0 0 12px}h1{font-size:26px;margin:8px 0}.topline{font-size:10px}.mark{display:none}.toolbar{margin-bottom:10px}h2{font-size:16px}.week{grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}.day{break-inside:avoid;border-radius:8px}.day-head{padding:8px}.day-head h3{font-size:13px}.group{padding:8px 6px 0}.group-title{font-size:9px}.subject{font-size:11px}.teacher,.period-number,.lessons time{font-size:9px}.periods li{padding:5px 0;gap:3px}.lessons li{padding:6px}.today-badge{display:none}}
+@media print{@page{size:A4 landscape;margin:9mm}:root{--bg:white}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.wrap{width:100%;padding:0}.students,.filters,.skip,footer{display:none}header{padding:0 0 12px}h1{font-size:26px;margin:8px 0}.topline{font-size:10px}.mark{display:none}.toolbar{margin-bottom:10px}h2{font-size:16px}.week{grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}.day{break-inside:avoid;border-radius:8px}.day-head{padding:8px}.day-head h3{font-size:13px}.group{padding:8px 6px 0}.group-title{font-size:9px}.subject{font-size:11px}.teacher,.period-number,.lessons time{font-size:9px}.periods li{padding:5px 0;gap:3px}.lessons li{padding:6px}.today-badge{display:none}}
 </style>
 </head>
 <body>
@@ -24,17 +25,18 @@
 <main class="wrap">
 <header>
 <div class="topline"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h3m2 0h3"/></svg></span> Góc học tập</div>
-<div class="heading"><div><h1><span>Thời khóa biểu của</span>Nguyễn Thanh Khôi</h1></div></div>
+<div class="heading"><div><h1 aria-live="polite"><span>Thời khóa biểu của</span><strong id="student-name">Nguyễn Thanh Khôi</strong></h1></div></div>
+<div class="students" role="group" aria-label="Chọn thời khóa biểu"><button data-student="khoi" aria-pressed="true">Thanh Khôi</button><button data-student="nhan" aria-pressed="false">Thanh Nhân</button></div>
 </header>
 <section id="schedule" aria-labelledby="schedule-title">
-<div class="toolbar"><div><h2>Lịch học trong tuần</h2><div class="legend"><span><i class="dot" aria-hidden="true"></i>Ở trường</span><span><i class="dot extra" aria-hidden="true"></i>Học thêm</span></div></div><div class="filters" role="group" aria-label="Lọc lịch học"><button data-filter="all" aria-pressed="true">Tất cả</button><button data-filter="school" aria-pressed="false">Ở trường</button><button data-filter="extra" aria-pressed="false">Học thêm</button></div></div>
+<div class="toolbar"><div><h2 id="schedule-title">Lịch học trong tuần</h2><div class="legend"><span><i class="dot" aria-hidden="true"></i>Ở trường</span><span><i class="dot extra" aria-hidden="true"></i>Học thêm</span></div></div><div class="filters" role="group" aria-label="Lọc lịch học"><button data-filter="all" aria-pressed="true">Tất cả</button><button data-filter="school" aria-pressed="false">Ở trường</button><button data-filter="extra" aria-pressed="false">Học thêm</button></div></div>
 <div id="week" class="week"></div>
 <noscript><p>Vui lòng bật JavaScript để xem thời khóa biểu.</p></noscript>
 </section>
-<footer><span>Nguyễn Thanh Khôi · Lớp 6.7</span><span>Một tuần học tập thật tốt!</span></footer>
+<footer><span id="student-footer">Nguyễn Thanh Khôi · Lớp 6.7</span><span>Một tuần học tập thật tốt!</span></footer>
 </main>
 <script>
-const days = [
+const khoiDays = [
  {name:'Thứ 2', school:[['Chào cờ','Luận'],['Ngữ văn','Vân (Văn)'],['GD địa phương','Nga'],['Lịch sử','Ái Nữ'],['KHTN','Uyên (H)']], extra:[['17:00','18:00','Piano'],['19:00','20:30','E6 (SM)']]},
  {name:'Thứ 3', school:[['Ngữ văn','Vân (Văn)'],['Ngữ văn','Vân (Văn)'],['Ngoại ngữ','Yến (AV)'],['KHTN','Uyên (H)'],['Toán','Luận']], extra:[['17:30','19:00','KET (SM)'],['19:30','21:00','Toán']]},
  {name:'Thứ 4', school:[['HĐTNHN (CĐ)','Trang'],['Toán','Luận'],['GDCD','Anh (Bùi)'],['Tin học','Duyên'],['KHTN','Uyên (H)']], extra:[['17:30','19:00','Văn']]},
@@ -42,16 +44,48 @@ const days = [
  {name:'Thứ 6', school:[['Địa lí','Én'],['Ngữ văn','Vân (Văn)'],['Toán','Luận'],['Toán','Luận'],['Sinh hoạt lớp','Luận']], second:[null,['Mỹ thuật','Thiên'],['Âm nhạc','Xạ'],['GDTC','C.Đạt'],['GDTC','C.Đạt']], extra:[]},
  {name:'Thứ 7', school:[['HĐTN','Luận'],['HĐTN','Phong']], extra:[['07:00','08:30','Văn'],['09:00','10:00','Piano'],['13:30','15:00','Toán'],['15:30','17:00','E6 (SM)']]}
 ];
-// Morning/afternoon confirmed by parent; school bell times were not provided.
+
+const nhanDays = [
+ {name:'Thứ 2', school:[['HĐTN (SHDC)',''],['HĐTT',''],['Tiếng Việt',''],['Toán','']], second:[['GDTC','Quảng'],['Tiếng Anh','Tâm'],['LS & ĐL','Trâm']], secondStart:5, extra:[['17:00','18:00','Piano']]},
+ {name:'Thứ 3', school:[['Tiếng Anh','Tâm'],['Tiếng Việt',''],['Toán',''],['Khoa học','']], second:[['LS & ĐL','Trâm'],['Tiếng Việt',''],['HĐTC','']], secondStart:5, extra:[['19:00','20:30','Movers (SM)']]},
+ {name:'Thứ 4', school:[['Mĩ thuật','Phương'],['Tiếng Anh','Tâm'],['Tiếng Việt',''],['Tiếng Việt','']], second:[['Toán',''],['Công nghệ',''],['HĐTN','']], secondStart:5, extra:[]},
+ {name:'Thứ 5', school:[null,['Tiếng Việt',''],['GDTC','Quảng'],['Toán','']], second:[['Khoa học',''],['Đạo đức',''],['HĐTC','']], secondStart:5, extra:[['19:00','20:30','Movers (SM)']]},
+ {name:'Thứ 6', school:[null,['Tiếng Việt',''],['Toán',''],['HĐTN (SHL)','']], second:[['Tiếng Anh','Tâm'],['Tin học','Anh'],['Âm nhạc','Uyên']], secondStart:5, extra:[]},
+ {name:'Thứ 7', school:[], extra:[['09:00','10:00','Piano'],['15:30','17:00','E4 (SM)']]}
+];
+const students = {
+ khoi: {name:'Nguyễn Thanh Khôi', className:'6.7', days:khoiDays},
+ nhan: {name:'Nguyễn Thanh Nhân', className:'4/23', days:nhanDays}
+};
+let selectedStudent = 'khoi';
+let selectedFilter = 'all';
+try {
+ const saved = localStorage.getItem('tkb-student');
+ if (Object.hasOwn(students, saved)) selectedStudent = saved;
+} catch (_) { /* The timetable also works when browser storage is unavailable. */ }
+
+// Preserve period numbers from each school timetable; bell times were not provided.
 const currentDay = Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',weekday:'short'}).format(new Date()).replace(/Sun|Mon|Tue|Wed|Thu|Fri|Sat/g, d=>({Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[d])));
-function periods(items){return '<ol class="periods">'+items.map((item,i)=>item?`<li value="${i+1}"><span class="period-number" aria-label="Tiết ${i+1}">${i+1}</span><div class="subject">${item[0]}<span class="teacher">${item[1]}</span></div></li>`:'').join('')+'</ol>';}
-function render(filter='all'){
- document.getElementById('week').innerHTML=days.map((day,i)=>`<article class="day ${currentDay===i+1?'today':''}" aria-labelledby="day-${i}">
+function periods(items, start=1){return '<ol class="periods">'+items.map((item,i)=>item?`<li value="${i+start}"><span class="period-number" aria-label="Tiết ${i+start}">${i+start}</span><div class="subject">${item[0]}${item[1]?`<span class="teacher">${item[1]}</span>`:''}</div></li>`:'').join('')+'</ol>';}
+function render(){
+ const student = students[selectedStudent];
+ const filter = selectedFilter;
+ document.getElementById('student-name').textContent = student.name;
+ document.getElementById('student-footer').textContent = `${student.name} · Lớp ${student.className}`;
+ document.title = `Thời khóa biểu · ${student.name}`;
+ document.querySelectorAll('[data-student]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.student === selectedStudent)));
+ document.querySelectorAll('[data-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.filter === filter)));
+ document.getElementById('week').innerHTML=student.days.map((day,i)=>`<article class="day ${currentDay===i+1?'today':''}" aria-labelledby="day-${i}">
  <div class="day-head"><h3 id="day-${i}">${day.name}</h3>${currentDay===i+1?'<span class="today-badge">Hôm nay</span>':''}</div>
- ${filter!=='extra'?`<section class="group"><h4 class="group-title">Ở trường · Sáng</h4>${periods(day.school)}</section>${day.second?`<section class="group"><h4 class="group-title">Ở trường · Chiều</h4>${periods(day.second)}</section>`:''}`:''}
+ ${filter!=='extra'?`${day.school.length?`<section class="group"><h4 class="group-title">Ở trường · Sáng</h4>${periods(day.school)}</section>`:''}${day.second?`<section class="group"><h4 class="group-title">Ở trường · Chiều</h4>${periods(day.second,day.secondStart || 1)}</section>`:''}${!day.school.length&&!day.second?'<section class="group"><h4 class="group-title">Ở trường</h4><p class="empty">Không có lịch ở trường</p></section>':''}`:''}
  ${filter!=='school'?`<section class="group extra-group"><h4 class="group-title">Học thêm</h4>${day.extra.length?'<ul class="lessons">'+day.extra.map(lesson=>`<li><time>${lesson[0]} – ${lesson[1]}</time><div class="subject">${lesson[2]}</div></li>`).join('')+'</ul>':'<p class="empty">Không có lịch học thêm</p>'}</section>`:''}</article>`).join('');
 }
-document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-filter]').forEach(other=>other.setAttribute('aria-pressed',String(other===button)));render(button.dataset.filter);}));
+document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{selectedFilter=button.dataset.filter;render();}));
+document.querySelectorAll('[data-student]').forEach(button=>button.addEventListener('click',()=>{
+ selectedStudent=button.dataset.student;
+ try { localStorage.setItem('tkb-student',selectedStudent); } catch (_) {}
+ render();
+}));
 render();
 if ('serviceWorker' in navigator) {
  window.addEventListener('load', () => {

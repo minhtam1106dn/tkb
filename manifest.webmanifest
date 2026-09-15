@@ -1,8 +1,8 @@
 {
   "id": "/tkb/",
-  "name": "Thời khóa biểu Nguyễn Thanh Khôi",
-  "short_name": "TKB Khôi",
-  "description": "Lịch học ở trường và học thêm của Nguyễn Thanh Khôi.",
+  "name": "Thời khóa biểu Thanh Khôi & Thanh Nhân",
+  "short_name": "TKB hai anh em",
+  "description": "Lịch học ở trường và học thêm của Nguyễn Thanh Khôi và Nguyễn Thanh Nhân.",
   "lang": "vi",
   "start_url": "./",
   "scope": "./",
@@ -10,7 +10,17 @@
   "background_color": "#f6f8fc",
   "theme_color": "#f6f8fc",
   "icons": [
-    {"src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }
