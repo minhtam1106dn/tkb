@@ -1,0 +1,1 @@
+window.TKB_CONFIG = {"url": "https://sundoeijcnaqunpsajgr.supabase.co", "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1bmRvZWlqY25hcXVucHNhamdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NzIxOTAsImV4cCI6MjEwNTA0ODE5MH0.47_hP1OZZqMunB4-6Umw67huSSvLQBFFlcw7S2h7FnU"};
