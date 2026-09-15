@@ -7,7 +7,6 @@
  const shortDateFormat=new Intl.DateTimeFormat('vi-VN',{timeZone:zone,day:'numeric',month:'numeric'});
  const monthFormat=new Intl.DateTimeFormat('vi-VN',{timeZone:zone,month:'long',year:'numeric'});
  const weekdayFormat=new Intl.DateTimeFormat('vi-VN',{timeZone:zone,weekday:'short'});
- const timeFormat=new Intl.DateTimeFormat('vi-VN',{timeZone:zone,hour:'2-digit',minute:'2-digit',hour12:false});
  let rangeMode='day',anchor=today(),lastToday=anchor,loadingKey='',loadedAt=new Map(),requestVersion=0;
 
  function today(){
@@ -66,17 +65,10 @@
   const completedRows=rows.filter(row=>row.completed&&expected.has(`${row.owner}:${row.task_id}`));
   const contribution={khoi:0,nhan:0};
   for(const row of completedRows)if(row.owner==='shared'&&Object.hasOwn(contribution,row.completed_by))contribution[row.completed_by]++;
-  const latest=completedRows.filter(row=>row.completed_at).sort((a,b)=>Date.parse(b.completed_at)-Date.parse(a.completed_at)).slice(0,5);
   const total=allDates.length*tasks.length,pct=total?Math.round(done/total*100):0;
   const attention=[...missed.values()].sort((a,b)=>b.count-a.count||a.task.name.localeCompare(b.task.name,'vi')).slice(0,4);
   const best=dayStats.reduce((winner,item)=>!winner||item.pct>winner.pct?item:winner,null);
-  return {allDates,done,total,pct,noHomework,perfectDays,streak,breakdown,dayStats,contribution,latest,attention,best};
- }
- function taskName(row,role){
-  const source=row.owner==='shared'?window.TKB_TASKS.common:privateTasks(row.owner);
-  const name=source.find(([id])=>id===row.task_id)?.[1]||row.task_id;
-  if(role==='parents'&&row.owner!=='shared')return `${name} · ${row.owner==='khoi'?'Khôi':'Nhân'}`;
-  return name;
+  return {allDates,done,total,pct,noHomework,perfectDays,streak,breakdown,dayStats,contribution,attention,best};
  }
  function buckets(stats){
   if(rangeMode!=='month')return stats.map(item=>({label:rangeMode==='day'?'Ngày này':weekdayFormat.format(parse(item.day)),done:item.done,total:item.total,pct:item.pct}));
@@ -102,8 +94,9 @@
   const data=analyze(rows,period,role),tip=insight(data,role),chart=buckets(data.dayStats);
   const breakdown=[...data.breakdown].map(([label,value])=>meter(label,value.done,value.total)).join('');
   const sharedTotal=data.contribution.khoi+data.contribution.nhan;
+  const khoiShare=sharedTotal?Math.round(data.contribution.khoi/sharedTotal*100):0,nhanShare=sharedTotal?100-khoiShare:0;
+  const contribution=sharedTotal?`<div class="contribution-layout"><div class="contribution-donut" style="--khoi-share:${khoiShare*3.6}deg" role="img" aria-label="Thanh Khôi ${data.contribution.khoi} việc, ${khoiShare} phần trăm; Thanh Nhân ${data.contribution.nhan} việc, ${nhanShare} phần trăm"><span><strong>${sharedTotal}</strong><small>việc chung</small></span></div><div class="contribution-legend"><div><i class="contribution-dot khoi" aria-hidden="true"></i><span>Thanh Khôi</span><strong>${data.contribution.khoi} · ${khoiShare}%</strong></div><div><i class="contribution-dot nhan" aria-hidden="true"></i><span>Thanh Nhân</span><strong>${data.contribution.nhan} · ${nhanShare}%</strong></div></div></div>`:'<p class="dashboard-empty">Chưa có việc chung hoàn thành trong kỳ.</p>';
   const attention=data.attention.length?`<ol class="attention-list">${data.attention.map(({task,count})=>`<li><span>${role==='parents'&&task.owner!=='shared'?`${task.name} · ${task.owner==='khoi'?'Khôi':'Nhân'}`:task.name}</span><strong>${count} ngày</strong></li>`).join('')}</ol>`:'<p class="dashboard-empty">Không có việc bị bỏ sót.</p>';
-  const latest=data.latest.length?`<ul class="activity-list">${data.latest.map(row=>`<li><span>${taskName(row,role)}</span><time datetime="${row.completed_at}">${shortDateFormat.format(new Date(row.completed_at))} · ${timeFormat.format(new Date(row.completed_at))}</time></li>`).join('')}</ul>`:'<p class="dashboard-empty">Chưa có hoạt động hoàn thành trong kỳ.</p>';
   byId('dashboard-content').innerHTML=`
    <div class="dashboard-summary">
     <article class="summary-card progress-card"><div class="progress-ring" style="--progress:${data.pct*3.6}deg" role="progressbar" aria-label="Tiến độ hoàn thành" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${data.pct}"><span>${data.pct}%</span></div><div><h3>Tiến độ</h3><p>${data.done}/${data.total} việc đã xong</p></div></article>
@@ -116,8 +109,7 @@
     <article class="dashboard-card trend-card"><header><div><h3>Nhịp hoàn thành</h3><p>${data.best?`Tốt nhất: ${shortDateFormat.format(parse(data.best.day))} · ${data.best.pct}%`:'Chưa có dữ liệu'}</p></div></header><div class="trend-chart">${chart.map(item=>`<div class="trend-column" title="${item.label}: ${item.done}/${item.total} việc"><strong>${item.pct}%</strong><div class="trend-track"><span style="height:${Math.max(item.pct,item.pct?8:0)}%"></span></div><small>${item.label}</small></div>`).join('')}</div></article>
     <article class="dashboard-card"><h3>Chi tiết tiến độ</h3><div class="dashboard-meters">${breakdown}</div></article>
     <article class="dashboard-card"><h3>Việc cần chú ý</h3>${attention}</article>
-    <article class="dashboard-card"><h3>Ai làm việc chung</h3>${sharedTotal?`${meter('Thanh Khôi',data.contribution.khoi,sharedTotal)}${meter('Thanh Nhân',data.contribution.nhan,sharedTotal)}`:'<p class="dashboard-empty">Chưa có việc chung hoàn thành trong kỳ.</p>'}</article>
-    <article class="dashboard-card activity-card"><h3>Hoàn thành gần đây</h3>${latest}</article>
+    <article class="dashboard-card contribution-card"><h3>Ai làm việc chung</h3>${contribution}</article>
    </div>`;
  }
  function draw(){
