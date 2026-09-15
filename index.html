@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TKB Demo</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+      background: #0b1020;
+      color: #f8fafc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 20% 20%, #4338ca55, transparent 35%),
+        radial-gradient(circle at 80% 75%, #0891b255, transparent 35%),
+        #0b1020;
+    }
+
+    main {
+      width: min(680px, 100%);
+      padding: 48px;
+      border: 1px solid #ffffff22;
+      border-radius: 24px;
+      background: #111827cc;
+      box-shadow: 0 24px 80px #0008;
+      backdrop-filter: blur(16px);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #22d3ee1f;
+      color: #67e8f9;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 20px 0 12px;
+      font-size: clamp(42px, 10vw, 76px);
+      line-height: .95;
+      letter-spacing: -.05em;
+    }
+
+    p {
+      margin: 0;
+      color: #cbd5e1;
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    a {
+      display: inline-block;
+      margin-top: 28px;
+      padding: 12px 18px;
+      border-radius: 12px;
+      background: #f8fafc;
+      color: #0f172a;
+      font-weight: 750;
+      text-decoration: none;
+    }
+
+    a:hover { transform: translateY(-2px); }
+  </style>
+</head>
+<body>
+  <main>
+    <span class="badge">GitHub Pages</span>
+    <h1>TKB đã hoạt động.</h1>
+    <p>Đây là trang demo được xuất bản tự động từ repository <strong>tkb</strong>.</p>
+    <a href="https://github.com/minhtam1106dn/tkb">Xem mã nguồn</a>
+  </main>
+</body>
+</html>
