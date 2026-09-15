@@ -46,11 +46,11 @@
  }
  function renderChecklist() {
   const student = students[selectedStudent];
-  const editable = selectedDate===today();
+  const editable = selectedDate===today() && currentViewer===selectedStudent;
   byId('checklist-date').value = selectedDate;
   byId('checklist-person').textContent = student.name;
   byId('private-title').textContent = `Việc riêng · ${student.name.replace('Nguyễn ','')}`;
-  byId('checklist-date-note').textContent = editable ? 'Hôm nay · Đánh dấu ngay khi hoàn thành. Bỏ dấu tích nếu chọn nhầm.' : 'Lịch sử theo ngày · Chỉ đánh dấu và sửa việc trong ngày hôm nay.';
+  byId('checklist-date-note').textContent = currentViewer==='parents' ? 'Ba Mẹ đang xem tiến độ. Chọn Thanh Khôi hoặc Thanh Nhân ở phía trên để xem từng bạn.' : editable ? 'Hôm nay · Việc chung đã xong được khóa. Việc riêng có thể bỏ dấu tích nếu chọn nhầm.' : 'Lịch sử theo ngày · Chỉ đánh dấu và sửa việc trong ngày hôm nay.';
   let completed=0, storageFailed=false;
   for (const [listId,owner,tasks] of taskGroups()) {
    const list = byId(listId);
@@ -59,11 +59,12 @@
     let record=null, readFailed=false;
     try { record=getCompletion(owner,id); } catch (_) {storageFailed=true;readFailed=true;}
     if (record) completed++;
+    const locked=owner==='shared' && !!record;
     const row=document.createElement('li');
-    row.className=`task-row ${record?'done':'pending'} ${editable?'':'readonly'}`;
+    row.className=`task-row ${record?'done':'pending'} ${editable&&!locked?'':'readonly'}`;
     const label=document.createElement('label');label.className='task-label';
     const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=!!record;
-    checkbox.disabled=!editable || readFailed;
+    checkbox.disabled=!editable || readFailed || locked;
     checkbox.dataset.owner=owner;checkbox.dataset.task=id;checkbox.id=`task-${owner}-${id}`;
     const copy=document.createElement('span');copy.className='task-copy';
     const title=document.createElement('span');title.className='task-name';title.textContent=name;
@@ -71,7 +72,7 @@
     checkbox.setAttribute('aria-describedby',status.id);
     if (record) {
      const time=document.createElement('time');time.dateTime=record.completedAt;time.textContent=timeFormat.format(new Date(record.completedAt));
-     status.append('Đã xong · ',time,` · ${students[record.completedBy].name.replace('Nguyễn ','')}`);
+     status.append('Đã xong · ',time,` · ${students[record.completedBy].name.replace('Nguyễn ','')}${locked?' · Đã khóa':''}`);
     } else status.textContent=readFailed?'Không đọc được trạng thái đã lưu':(selectedDate>today()?'Chưa đến ngày thực hiện':'Chưa xong');
     copy.append(title,status);label.append(checkbox,copy);row.append(label);list.append(row);
    }
@@ -91,26 +92,42 @@
   if(selectedDate===lastToday) selectedDate=next;
   lastToday=next;renderChecklist();return true;
  }
- byId('checklist').addEventListener('change',event=>{
+ byId('checklist').addEventListener('change',async event=>{
   const input=event.target;
   if(!input.matches('input[data-task]'))return;
-  if(rollDate() || selectedDate!==today()){renderChecklist();return;}
+  if(rollDate() || selectedDate!==today() || currentViewer!==selectedStudent){renderChecklist();return;}
   const owner=input.dataset.owner,id=input.dataset.task;
   const group=taskGroups().find(([,candidate])=>candidate===owner);
   const task=group?.[2].find(([candidate])=>candidate===id);
   if(!task){renderChecklist();return;}
+  const actor=currentViewer,day=selectedDate,checked=input.checked;
+  const key=keyFor(owner,id);
+  input.disabled=true;
   byId('checklist-error').textContent='';
   try {
-   // One storage key per task avoids overwriting other tasks changed in another tab.
-   const existing=getCompletion(owner,id);
-   if(input.checked && !existing) localStorage.setItem(keyFor(owner,id),JSON.stringify({completedAt:new Date().toISOString(),completedBy:selectedStudent}));
-   else if(!input.checked) localStorage.removeItem(keyFor(owner,id));
-   byId('checklist-feedback').textContent=`${task[1]}: ${input.checked?'đã lưu hoàn thành':'đã bỏ đánh dấu'}.`;
+   const write=()=>{
+    // Recheck after acquiring the lock, in case another tab completed this item.
+    if(currentViewer!==actor || selectedDate!==day || today()!==day)return;
+    const existing=getCompletion(owner,id);
+    if(owner==='shared' && existing){
+     byId('checklist-feedback').textContent=`${task[1]} đã hoàn thành, không thể đánh dấu lại.`;
+     return;
+    }
+    if(checked && !existing) localStorage.setItem(key,JSON.stringify({completedAt:new Date().toISOString(),completedBy:actor}));
+    else if(!checked && owner!=='shared') localStorage.removeItem(key);
+    byId('checklist-feedback').textContent=`${task[1]}: ${checked?'đã lưu hoàn thành':'đã bỏ đánh dấu'}.`;
+   };
+   if(navigator.locks)await navigator.locks.request(key,write);
+   else write();
   } catch (_) {
    byId('checklist-error').textContent='Chưa lưu được thay đổi. Hãy kiểm tra quyền lưu dữ liệu hoặc dung lượng trình duyệt rồi thử lại.';
   }
   renderChecklist();
-  byId(`task-${owner}-${id}`)?.focus({preventScroll:true});
+  if(currentViewer===actor && selectedDate===day){
+   const control=byId(`task-${owner}-${id}`);
+   if(control && !control.disabled)control.focus({preventScroll:true});
+   else if(control){const row=control.closest('li');row.tabIndex=-1;row.focus({preventScroll:true});}
+  }
  });
  byId('checklist-date').addEventListener('change',event=>{
   const value=event.target.value;

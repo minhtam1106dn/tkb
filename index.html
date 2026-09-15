@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="TKB hai anh em">
-<title>Thời khóa biểu · Nguyễn Thanh Khôi</title>
+<title>Góc học tập · Thanh Khôi & Thanh Nhân</title>
 <style>
 :root{color-scheme:light;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--bg:#f6f8fc;--paper:#fff;--text:#17243b;--muted:#53627a;--line:#dde4ee;--blue:#2455b5;--blue-bg:#edf3ff;--purple:#7140a1;--purple-bg:#f5effc;--radius:18px;color:var(--text);background:var(--bg)}
 *{box-sizing:border-box}body{margin:0;line-height:1.5}button{font:inherit;cursor:pointer;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:10px 16px;background:var(--paper);color:var(--text);font-weight:600;transition:background .18s,border-color .18s}button:hover{background:var(--blue-bg);border-color:var(--blue)}button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:4px}button:active{background:var(--line)}button[aria-pressed=true]{background:var(--text);color:white;border-color:var(--text)}.wrap{width:min(1500px,100%);margin:auto;padding:24px 16px 32px}.topline{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}.mark{width:32px;height:32px;display:grid;place-items:center;background:var(--blue);border-radius:9px;color:#fff}.mark svg{width:20px;height:20px}header{padding:12px 0 26px}.heading{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap}h1{font-size:clamp(30px,4vw,46px);line-height:1.2;letter-spacing:-.04em;margin:18px 0 10px}h1 span{display:block;font-size:16px;letter-spacing:0;font-weight:500;color:var(--muted);margin-bottom:9px}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}h2{font-size:22px;letter-spacing:-.025em;margin:0}.filters{display:flex;gap:8px;flex-wrap:wrap}.filters button{font-size:14px}.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin:8px 0 0}.legend span{display:flex;align-items:center;gap:6px}.dot{width:8px;height:8px;border-radius:50%;background:var(--blue)}.dot.extra{background:var(--purple)}.week{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}.day{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;min-width:0}.day.today{border:2px solid var(--blue)}.day-head{padding:15px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:#fafbfd}.today .day-head{background:var(--blue-bg)}.day-head h3{margin:0;font-size:18px}.today-badge{font-size:11px;font-weight:700;color:var(--blue);background:var(--paper);border-radius:6px;padding:4px 7px}.group{padding:14px 12px 0}.group:last-child{padding-bottom:14px}.group-title{margin:0 0 9px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}.extra-group .group-title{color:var(--purple)}.periods,.lessons{list-style:none;margin:0;padding:0}.periods li{display:flex;gap:9px;padding:8px 3px;border-bottom:1px solid #eef1f6;align-items:baseline}.periods li:last-child{border:0}.period-number{font-size:12px;color:var(--muted);width:16px;flex-shrink:0;font-variant-numeric:tabular-nums}.subject{font-size:14px;font-weight:650;overflow-wrap:anywhere}.teacher{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:1px}.lessons li{border-radius:10px;background:var(--purple-bg);border-left:3px solid var(--purple);padding:10px;margin-top:8px}.lessons time{display:block;color:var(--purple);font-weight:650;font-size:12px;font-variant-numeric:tabular-nums;margin-bottom:3px}.empty{color:var(--muted);font-size:13px;margin:0;padding:10px 0}footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:22px;font-size:12px;color:var(--muted)}[hidden]{display:none!important}.skip{position:absolute;left:16px;top:-100px;background:white;padding:12px;z-index:5}.skip:focus{top:10px}
@@ -23,10 +23,17 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 </head>
 <body>
 <a class="skip" href="#schedule">Đến lịch học</a>
-<main class="wrap">
+<dialog id="viewer-dialog" aria-labelledby="viewer-title" aria-describedby="viewer-description">
+<div class="viewer-mark" aria-hidden="true">TKB</div><h2 id="viewer-title">Ai đang xem hôm nay?</h2>
+<p id="viewer-description">Chọn tên để mở lịch học và việc mỗi ngày.</p>
+<div class="viewer-options"><button data-viewer="khoi" autofocus><strong>Thanh Khôi</strong><span>Lịch học và việc của Khôi</span></button><button data-viewer="nhan"><strong>Thanh Nhân</strong><span>Lịch học và việc của Nhân</span></button><button data-viewer="parents"><strong>Ba Mẹ</strong><span>Xem lịch học và tiến độ của cả hai bạn</span></button></div>
+<button id="viewer-cancel" hidden>Quay lại</button>
+</dialog>
+<main id="app" class="wrap" hidden>
 <header>
 <div class="topline"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h3m2 0h3"/></svg></span> Góc học tập</div>
-<div class="heading"><div><h1 aria-live="polite"><span>Góc học tập của</span><strong id="student-name">Nguyễn Thanh Khôi</strong></h1></div></div>
+<div class="viewer-bar"><span id="viewer-label"></span><button id="change-viewer">Đổi người xem</button></div>
+<div class="heading"><div><h1 id="page-heading" tabindex="-1" aria-live="polite"><span>Góc học tập của</span><strong id="student-name">Nguyễn Thanh Khôi</strong></h1></div></div>
 <div class="students" role="group" aria-label="Chọn bạn"><button data-student="khoi" aria-pressed="true">Thanh Khôi</button><button data-student="nhan" aria-pressed="false">Thanh Nhân</button></div>
 <nav class="view-switch" aria-label="Nội dung"><button data-view="schedule" aria-pressed="true" aria-controls="schedule">Thời khóa biểu</button><button data-view="checklist" aria-pressed="false" aria-controls="checklist">Việc mỗi ngày</button></nav>
 </header>
@@ -43,7 +50,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <p id="checklist-error" class="checklist-alert" role="alert"></p>
 <p id="checklist-feedback" class="sr-only" role="status" aria-live="polite"></p>
 <div class="checklist-columns">
-<section class="task-group" aria-labelledby="common-title"><h3 id="common-title">Việc chung</h3><p class="task-group-description">Một bạn hoàn thành là xong cho cả hai; ghi tên bạn đã làm.</p><ul id="common-tasks" class="task-list"></ul></section>
+<section class="task-group" aria-labelledby="common-title"><h3 id="common-title">Việc chung</h3><p class="task-group-description">Một bạn hoàn thành là xong cho cả hai. Việc đã xong được khóa và ghi tên bạn đã làm.</p><ul id="common-tasks" class="task-list"></ul></section>
 <section class="task-group" aria-labelledby="private-title"><h3 id="private-title">Việc riêng</h3><p class="task-group-description">Mỗi bạn tự hoàn thành bốn việc của mình.</p><ul id="private-tasks" class="task-list"></ul></section>
 </div>
 <p class="storage-note">Tự lưu từng mục trên trình duyệt này, dùng được khi offline. Không đồng bộ giữa các thiết bị; xóa dữ liệu trang sẽ xóa lịch sử. Giờ hoàn thành theo giờ Việt Nam.</p>
@@ -72,6 +79,7 @@ const students = {
  khoi: {name:'Nguyễn Thanh Khôi', className:'6.7', days:khoiDays},
  nhan: {name:'Nguyễn Thanh Nhân', className:'4/23', days:nhanDays}
 };
+let currentViewer = null;
 let selectedStudent = 'khoi';
 let selectedFilter = 'all';
 try {
@@ -83,6 +91,8 @@ try {
 const currentDay = Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',weekday:'short'}).format(new Date()).replace(/Sun|Mon|Tue|Wed|Thu|Fri|Sat/g, d=>({Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[d])));
 function periods(items, start=1){return '<ol class="periods">'+items.map((item,i)=>item?`<li value="${i+start}"><span class="period-number" aria-label="Tiết ${i+start}">${i+start}</span><div class="subject">${item[0]}${item[1]?`<span class="teacher">${item[1]}</span>`:''}</div></li>`:'').join('')+'</ol>';}
 function render(){
+ if (currentViewer && currentViewer !== 'parents') selectedStudent=currentViewer;
+ document.querySelector('.students').hidden=currentViewer!=='parents';
  const student = students[selectedStudent];
  const filter = selectedFilter;
  document.getElementById('student-name').textContent = student.name;
@@ -98,12 +108,44 @@ function render(){
 }
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{selectedFilter=button.dataset.filter;render();}));
 document.querySelectorAll('[data-student]').forEach(button=>button.addEventListener('click',()=>{
+ if(currentViewer!=='parents')return;
  selectedStudent=button.dataset.student;
  try { localStorage.setItem('tkb-student',selectedStudent); } catch (_) {}
  render();
 }));
+const viewerDialog=document.getElementById('viewer-dialog');
+function openViewerDialog(){
+ document.getElementById('viewer-cancel').hidden=!currentViewer;
+ viewerDialog.showModal();
+}
+viewerDialog.addEventListener('cancel',event=>{if(!currentViewer)event.preventDefault();});
+viewerDialog.addEventListener('keydown',event=>{
+ if(event.key==='Escape' && !currentViewer)event.preventDefault();
+ if(event.key==='Tab'){
+  const buttons=Array.from(viewerDialog.querySelectorAll('button:not([hidden])'));
+  const position=buttons.indexOf(document.activeElement);
+  event.preventDefault();
+  buttons[(position+(event.shiftKey?-1:1)+buttons.length)%buttons.length].focus();
+ }
+});
+viewerDialog.addEventListener('close',()=>{if(!currentViewer && !viewerDialog.open)openViewerDialog();});
+document.getElementById('viewer-cancel').addEventListener('click',()=>{if(currentViewer)viewerDialog.close();});
+document.getElementById('change-viewer').addEventListener('click',openViewerDialog);
+document.querySelectorAll('[data-viewer]').forEach(button=>button.addEventListener('click',()=>{
+ const viewer=button.dataset.viewer;
+ if(viewer!=='parents' && !Object.hasOwn(students,viewer))return;
+ currentViewer=viewer;
+ if(viewer!=='parents')selectedStudent=viewer;
+ document.getElementById('viewer-label').textContent=viewer==='parents'?'Ba Mẹ · Xem cả hai bạn':`Đang xem: ${students[viewer].name.replace('Nguyễn ','')}`;
+ document.getElementById('app').hidden=false;
+ render();
+ viewerDialog.close();
+ document.getElementById('page-heading').focus({preventScroll:true});
+}));
 render();
-if ('serviceWorker' in navigator) {
+openViewerDialog();
+window.addEventListener('pageshow',event=>{if(event.persisted && !viewerDialog.open)openViewerDialog();});
+if ('serviceWorker'  in navigator) {
  window.addEventListener('load', () => {
   navigator.serviceWorker.register('./sw.js', {scope: './', updateViaCache: 'none'})
    .catch(error => console.error('Không thể bật chế độ ngoại tuyến:', error));
