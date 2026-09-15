@@ -5,11 +5,12 @@
  let state={days:{},queue:[]},storageKey='',refreshing=null,flushing=null,pulling=null;
  const listeners=new Set();
  const emit=()=>listeners.forEach(fn=>fn());
- const empty=()=>({days:{},queue:[]});
+ const empty=()=>({days:{},queue:[],leaderboards:{}});
  function load(){
   const raw=localStorage.getItem(storageKey);
   const next=raw?JSON.parse(raw):empty();
   if(!next || !next.days || !Array.isArray(next.queue))throw new Error('Không đọc được dữ liệu trên thiết bị.');
+  if(!next.leaderboards || typeof next.leaderboards!=='object')next.leaderboards={};
   state=next;
  }
  function persist(){localStorage.setItem(storageKey,JSON.stringify(state));}
@@ -97,6 +98,20 @@
   if(version!==generation)return [];
   emit();return rowsBetween(from,to);
  }
+ async function loadLeaderboard(from,to){
+  if(!profile || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from>to)
+   throw new Error('Khoảng xếp hạng không hợp lệ.');
+  const cacheKey=`${from}:${to}`;
+  if(!navigator.onLine){
+   const cached=state.leaderboards[cacheKey];
+   if(cached)return cached;
+   throw new Error('Cần kết nối mạng để tải xếp hạng lần đầu.');
+  }
+  const version=generation;
+  const rows=await api('/rest/v1/rpc/tkb_leaderboard',{p_from:from,p_to:to});
+  await lock(()=>{if(version===generation){load();state.leaderboards[cacheKey]=rows;persist();}});
+  return version===generation?rows:[];
+ }
  async function flush(){
   if(flushing)return flushing;
   if(!profile || !navigator.onLine)return;
@@ -113,6 +128,7 @@
     persist();
     if(result.conflict)window.dispatchEvent(new CustomEvent('tkb-conflict',{detail:'Mục này đã thay đổi trên thiết bị khác. Đã lấy trạng thái mới nhất.'}));
     status=state.queue.length?'Đang đồng bộ':'Đã đồng bộ';emit();
+    window.dispatchEvent(new Event('tkb-ranking-change'));
    }
   }).catch(error=>{if(version===generation)failure(error);}).finally(()=>{flushing=null;});
   return flushing;
@@ -200,7 +216,7 @@
   }
   if(version===generation)localStorage.setItem(marker,'1');
  }
- window.TKBCloud={login,logout,save,sync,warmup,loadRange,
+ window.TKBCloud={login,logout,save,sync,warmup,loadRange,loadLeaderboard,
   get role(){return profile?.role;},get status(){return status;},
   getRows(from,to){return profile?rowsBetween(from,to):[];},
   getCompletion(day,owner,id){if(!profile)return null;const r=viewRow(day,owner,id);return r?.completed?{completedAt:r.completed_at,completedBy:r.completed_by,note:r.note,pending:!!r.pending}:null;},

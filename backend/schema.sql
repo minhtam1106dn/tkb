@@ -135,6 +135,49 @@ end $$;
 revoke all on function public.tkb_import_task(date,text,text,timestamptz,text) from public,anon;
 grant execute on function public.tkb_import_task(date,text,text,timestamptz,text) to authenticated;
 
+-- Return only aggregate ranking data, so children never receive each other's task details.
+create or replace function public.tkb_leaderboard(p_from date,p_to date)
+returns table(
+ student text,private_done bigint,private_expected bigint,shared_done bigint,
+ completion_points bigint,shared_points bigint,early_bonus bigint,
+ perfect_days bigint,consistency_points bigint,score bigint
+)
+language plpgsql stable security definer set search_path='' as $$
+begin
+ if tkb_private.viewer_role() is null then raise exception 'Not allowed' using errcode='42501'; end if;
+ if p_from is null or p_to is null or p_from>p_to or p_to>(now() at time zone 'Asia/Ho_Chi_Minh')::date
+   or p_to-p_from>62 then raise exception 'Invalid leaderboard range'; end if;
+ return query
+ with children(student,expected) as (values ('khoi'::text,6),('nhan'::text,5)),
+ days(day) as (select generate_series(p_from,p_to,interval '1 day')::date),
+ daily as (
+  select c.student,d.day,c.expected,
+   count(t.task_id) filter(where t.owner=c.student)::bigint as private_done,
+   count(t.task_id) filter(where t.owner='shared')::bigint as shared_done,
+   least(15,coalesce(sum(case when t.note is null then case
+    when (t.completed_at at time zone 'Asia/Ho_Chi_Minh')::time<time '18:00' then 3
+    when (t.completed_at at time zone 'Asia/Ho_Chi_Minh')::time<time '20:00' then 2
+    when (t.completed_at at time zone 'Asia/Ho_Chi_Minh')::time<time '21:00' then 1
+    else 0 end else 0 end),0))::bigint as early_bonus
+  from days d cross join children c
+  left join public.tkb_tasks t on t.day=d.day and t.completed and
+   (t.owner=c.student or (t.owner='shared' and t.completed_by=c.student))
+  group by c.student,d.day,c.expected
+ ), scored as (
+  select d.*,round(60.0*d.private_done/d.expected)::bigint as completion_points,
+   d.shared_done*10 as shared_points,
+   case when d.private_done=d.expected then 10 else 0 end::bigint as consistency_points
+  from daily d
+ )
+ select s.student,sum(s.private_done)::bigint,sum(s.expected)::bigint,sum(s.shared_done)::bigint,
+  sum(s.completion_points)::bigint,sum(s.shared_points)::bigint,sum(s.early_bonus)::bigint,
+  count(*) filter(where s.private_done=s.expected)::bigint,sum(s.consistency_points)::bigint,
+  sum(s.completion_points+s.shared_points+s.early_bonus+s.consistency_points)::bigint
+ from scored s group by s.student order by 10 desc,s.student;
+end $$;
+revoke all on function public.tkb_leaderboard(date,date) from public,anon;
+grant execute on function public.tkb_leaderboard(date,date) to authenticated;
+
 -- Only the login function's service credential can consume rate-limit buckets.
 create table if not exists tkb_private.login_attempts (
  bucket text primary key, started_at timestamptz not null, attempts integer not null
