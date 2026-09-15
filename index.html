@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f6f8fc">
 <link rel="icon" type="image/jpeg" href="./images.jpeg">
+<link rel="stylesheet" href="./checklist.css">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="TKB hai anh em">
@@ -25,13 +26,27 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <main class="wrap">
 <header>
 <div class="topline"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h3m2 0h3"/></svg></span> Góc học tập</div>
-<div class="heading"><div><h1 aria-live="polite"><span>Thời khóa biểu của</span><strong id="student-name">Nguyễn Thanh Khôi</strong></h1></div></div>
-<div class="students" role="group" aria-label="Chọn thời khóa biểu"><button data-student="khoi" aria-pressed="true">Thanh Khôi</button><button data-student="nhan" aria-pressed="false">Thanh Nhân</button></div>
+<div class="heading"><div><h1 aria-live="polite"><span>Góc học tập của</span><strong id="student-name">Nguyễn Thanh Khôi</strong></h1></div></div>
+<div class="students" role="group" aria-label="Chọn bạn"><button data-student="khoi" aria-pressed="true">Thanh Khôi</button><button data-student="nhan" aria-pressed="false">Thanh Nhân</button></div>
+<nav class="view-switch" aria-label="Nội dung"><button data-view="schedule" aria-pressed="true" aria-controls="schedule">Thời khóa biểu</button><button data-view="checklist" aria-pressed="false" aria-controls="checklist">Việc mỗi ngày</button></nav>
 </header>
 <section id="schedule" aria-labelledby="schedule-title">
 <div class="toolbar"><div><h2 id="schedule-title">Lịch học trong tuần</h2><div class="legend"><span><i class="dot" aria-hidden="true"></i>Ở trường</span><span><i class="dot extra" aria-hidden="true"></i>Học thêm</span></div></div><div class="filters" role="group" aria-label="Lọc lịch học"><button data-filter="all" aria-pressed="true">Tất cả</button><button data-filter="school" aria-pressed="false">Ở trường</button><button data-filter="extra" aria-pressed="false">Học thêm</button></div></div>
 <div id="week" class="week"></div>
 <noscript><p>Vui lòng bật JavaScript để xem thời khóa biểu.</p></noscript>
+</section>
+<section id="checklist" aria-labelledby="checklist-title" hidden>
+<div class="checklist-toolbar"><div><h2 id="checklist-title">Việc mỗi ngày</h2><p id="checklist-person"></p></div>
+<div class="date-controls"><button data-date-step="-1" aria-label="Ngày trước">←</button><div class="date-field"><label for="checklist-date">Ngày thực hiện</label><input id="checklist-date" type="date" required></div><button data-date-step="1" aria-label="Ngày sau">→</button><button id="checklist-today">Hôm nay</button></div></div>
+<p id="checklist-date-note" class="storage-note"></p>
+<div id="checklist-progress" class="checklist-progress"><strong id="checklist-count"></strong><span id="checklist-remaining"></span></div>
+<p id="checklist-error" class="checklist-alert" role="alert"></p>
+<p id="checklist-feedback" class="sr-only" role="status" aria-live="polite"></p>
+<div class="checklist-columns">
+<section class="task-group" aria-labelledby="common-title"><h3 id="common-title">Việc chung</h3><p class="task-group-description">Một bạn hoàn thành là xong cho cả hai; ghi tên bạn đã làm.</p><ul id="common-tasks" class="task-list"></ul></section>
+<section class="task-group" aria-labelledby="private-title"><h3 id="private-title">Việc riêng</h3><p class="task-group-description">Mỗi bạn tự hoàn thành bốn việc của mình.</p><ul id="private-tasks" class="task-list"></ul></section>
+</div>
+<p class="storage-note">Tự lưu từng mục trên trình duyệt này, dùng được khi offline. Không đồng bộ giữa các thiết bị; xóa dữ liệu trang sẽ xóa lịch sử. Giờ hoàn thành theo giờ Việt Nam.</p>
 </section>
 <footer><span id="student-footer">Nguyễn Thanh Khôi · Lớp 6.7</span><span>Một tuần học tập thật tốt!</span></footer>
 </main>
@@ -79,6 +94,7 @@ function render(){
  <div class="day-head"><h3 id="day-${i}">${day.name}</h3>${currentDay===i+1?'<span class="today-badge">Hôm nay</span>':''}</div>
  ${filter!=='extra'?`${day.school.length?`<section class="group"><h4 class="group-title">Ở trường · Sáng</h4>${periods(day.school)}</section>`:''}${day.second?`<section class="group"><h4 class="group-title">Ở trường · Chiều</h4>${periods(day.second,day.secondStart || 1)}</section>`:''}${!day.school.length&&!day.second?'<section class="group"><h4 class="group-title">Ở trường</h4><p class="empty">Không có lịch ở trường</p></section>':''}`:''}
  ${filter!=='school'?`<section class="group extra-group"><h4 class="group-title">Học thêm</h4>${day.extra.length?'<ul class="lessons">'+day.extra.map(lesson=>`<li><time>${lesson[0]} – ${lesson[1]}</time><div class="subject">${lesson[2]}</div></li>`).join('')+'</ul>':'<p class="empty">Không có lịch học thêm</p>'}</section>`:''}</article>`).join('');
+ window.renderChecklist?.();
 }
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{selectedFilter=button.dataset.filter;render();}));
 document.querySelectorAll('[data-student]').forEach(button=>button.addEventListener('click',()=>{
@@ -94,5 +110,6 @@ if ('serviceWorker' in navigator) {
  });
 }
 </script>
+<script src="./checklist.js"></script>
 </body>
 </html>
