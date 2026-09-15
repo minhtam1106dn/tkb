@@ -53,6 +53,23 @@
   }
   return row;
  }
+ function rowsBetween(from,to){
+  const rows=new Map();
+  for(const [day,items] of Object.entries(state.days)){
+   if(day<from || day>to)continue;
+   for(const row of items)rows.set(`${day}:${row.owner}:${row.task_id}`,row);
+  }
+  for(const operation of state.queue){
+   if(operation.p_day<from || operation.p_day>to)continue;
+   rows.set(`${operation.p_day}:${operation.p_owner}:${operation.p_task}`,{
+    day:operation.p_day,owner:operation.p_owner,task_id:operation.p_task,
+    completed:operation.p_complete,completed_at:operation.p_complete?operation.p_changed_at:null,
+    completed_by:operation.p_complete?profile?.role:null,note:operation.p_complete?operation.p_note:null,
+    revision:operation.p_expected_revision+1,pending:true
+   });
+  }
+  return [...rows.values()];
+ }
  function failure(error){status=navigator.onLine?error.message:'Mất mạng · Thay đổi đang chờ đồng bộ';emit();}
  async function pull(day=activeDay){
   if(!profile || !day || !navigator.onLine)return;
@@ -64,6 +81,21 @@
    status=state.queue.length?'Đang chờ đồng bộ':'Đã đồng bộ';
   });
   if(version===generation)emit();
+ }
+ async function loadRange(from,to){
+  if(!profile || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from>to)
+   throw new Error('Khoảng ngày không hợp lệ.');
+  const span=(Date.parse(to+'T12:00:00Z')-Date.parse(from+'T12:00:00Z'))/86400000;
+  if(span>62)throw new Error('Khoảng thống kê quá dài.');
+  if(!navigator.onLine)return rowsBetween(from,to);
+  const version=generation;
+  const rows=await api(`/rest/v1/tkb_tasks?day=gte.${encodeURIComponent(from)}&day=lte.${encodeURIComponent(to)}&select=*`);
+  await lock(()=>{
+   if(version!==generation)return;
+   load();for(const row of rows)cacheRow(row);persist();
+  });
+  if(version!==generation)return [];
+  emit();return rowsBetween(from,to);
  }
  async function flush(){
   if(flushing)return flushing;
@@ -168,8 +200,9 @@
   }
   if(version===generation)localStorage.setItem(marker,'1');
  }
- window.TKBCloud={login,logout,save,sync,warmup,
+ window.TKBCloud={login,logout,save,sync,warmup,loadRange,
   get role(){return profile?.role;},get status(){return status;},
+  getRows(from,to){return profile?rowsBetween(from,to):[];},
   getCompletion(day,owner,id){if(!profile)return null;const r=viewRow(day,owner,id);return r?.completed?{completedAt:r.completed_at,completedBy:r.completed_by,note:r.note,pending:!!r.pending}:null;},
   watchDate(day){if(day===activeDay)return;activeDay=day;if(profile)pull(day).catch(failure);},
   subscribe(fn){listeners.add(fn);return ()=>listeners.delete(fn);}

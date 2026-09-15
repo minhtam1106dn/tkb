@@ -13,6 +13,7 @@
   ['sm-homework','Làm bài tập ở SM'], ['prepare','Soạn thời khóa biểu']
  ];
  const optionalTasks=new Set(['extra-homework','sm-homework']);
+ window.TKB_TASKS={common:commonTasks,private:privateTasks,optional:optionalTasks};
  function taskGroups() {
   const personal=privateTasks.filter(([id])=>selectedStudent!=='nhan' || id!=='extra-homework');
   return [['common-tasks','shared',commonTasks],['private-tasks',selectedStudent,personal]];
@@ -27,7 +28,7 @@
  }
  let lastToday = today();
  let selectedDate = lastToday;
- let selectedView = 'schedule';
+ let selectedView = 'dashboard';
  const byId = id => document.getElementById(id);
  const keyFor = (owner,id) => `${prefix}${selectedDate}:${owner}:${id}`;
  function getCompletion(owner,id) {
@@ -42,13 +43,18 @@
   return record;
  }
  function setView(view) {
+  if(!['dashboard','schedule','checklist'].includes(view))return;
   selectedView = view;
-  byId('schedule').hidden = view !== 'schedule';
-  byId('checklist').hidden = view !== 'checklist';
-  document.querySelector('.skip').href = view === 'checklist' ? '#checklist' : '#schedule';
+  for(const id of ['dashboard','schedule','checklist'])byId(id).hidden=view!==id;
+  document.querySelector('.skip').href = `#${view}`;
   document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.view===view)));
+  document.querySelector('.students').hidden=currentViewer!=='parents' || view==='dashboard';
+  const familyDashboard=view==='dashboard' && currentViewer==='parents';
+  byId('student-name').textContent=familyDashboard?'Thanh Khôi & Thanh Nhân':students[selectedStudent].name;
+  byId('student-footer').textContent=familyDashboard?'Thanh Khôi & Thanh Nhân':`${students[selectedStudent].name} · Lớp ${students[selectedStudent].className}`;
   try { localStorage.setItem('tkb-view',view); } catch (_) {}
   if (view==='checklist') renderChecklist();
+  if (view==='dashboard') window.renderDashboard?.();
  }
  function renderChecklist() {
   const focused=document.activeElement?.matches("input[data-task]")?document.activeElement.id:null;
@@ -170,9 +176,9 @@
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)rollDate();});
  setInterval(rollDate,30000);
  window.renderChecklist=renderChecklist;
+ window.setAppView=setView;
  window.TKBCloud?.subscribe(renderChecklist);
  window.addEventListener('tkb-conflict',event=>{byId('checklist-error').textContent=event.detail;});
- try{if(localStorage.getItem('tkb-view')==='checklist')selectedView='checklist';}catch(_){}
  try {
   for(const key of Object.keys(localStorage)){
    const match=key.match(/^tkb-checklist:v1:(\d{4}-\d{2}-\d{2}):shared:(bath|uniform)$/);
