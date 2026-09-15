@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f6f8fc">
 <link rel="icon" type="image/jpeg" href="./images.jpeg">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="TKB Khôi">
 <title>Thời khóa biểu · Nguyễn Thanh Khôi</title>
 <style>
 :root{color-scheme:light;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--bg:#f6f8fc;--paper:#fff;--text:#17243b;--muted:#53627a;--line:#dde4ee;--blue:#2455b5;--blue-bg:#edf3ff;--purple:#7140a1;--purple-bg:#f5effc;--radius:18px;color:var(--text);background:var(--bg)}
@@ -50,6 +53,12 @@ function render(filter='all'){
 }
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-filter]').forEach(other=>other.setAttribute('aria-pressed',String(other===button)));render(button.dataset.filter);}));
 render();
+if ('serviceWorker' in navigator) {
+ window.addEventListener('load', () => {
+  navigator.serviceWorker.register('./sw.js', {scope: './', updateViaCache: 'none'})
+   .catch(error => console.error('Không thể bật chế độ ngoại tuyến:', error));
+ });
+}
 </script>
 </body>
 </html>
