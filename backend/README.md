@@ -4,7 +4,7 @@ Project: `tkb-family` (`sundoeijcnaqunpsajgr`), Free plan, Singapore (`ap-southe
 
 - `schema.sql`: authenticated reads, child/parent permissions, task validation, completion revisions, idempotent operations, legacy import, and a login rate limiter.
 - `functions/tkb-login/index.ts`: validates one of three roles with Supabase Auth. A server-only HMAC pepper supports the chosen passwords without embedding passwords in the client. Login is limited to 30 attempts per IP per 15 minutes. Public account signup is disabled.
-- `../auth-sync.js`: password sign-in, in-memory tokens, automatic token refresh, five-second polling while visible, per-account local cache, durable offline queue, Web Locks across tabs, revision conflict resolution.
+- `../auth-sync.js`: password sign-in, in-memory tokens, automatic token refresh, five-second polling while visible, per-account local cache, durable offline queue, Web Locks across tabs, revision conflict resolution. The login function returns the authorized role, timetable and current-day tasks in one response; legacy import and queue flushing continue after the interface opens.
 - `../cloud-config.js` contains only the public project URL and anonymous API key. Table permissions and RLS enforce access on the server.
 - Each page load or user change requires password sign-in with an internet connection. A signed-in page can queue changes offline. Reloading preserves queued changes; they are sent after the same child signs in online again.
 - Legacy local records are imported once per child per browser after sign-in. Only that child's own completions are imported; existing cloud records win. Original local history is retained. Shared bath/uniform history migrates to the original child's private list before import.

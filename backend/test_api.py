@@ -1,4 +1,4 @@
-import json,urllib.request,urllib.error,uuid,datetime,concurrent.futures,os
+import json,urllib.request,urllib.error,uuid,datetime,concurrent.futures,os,time
 from pathlib import Path
 c=json.loads((Path.home()/'.config/tkb/supabase-private.json').read_text())
 def request(path,body=None,token=None,method=None):
@@ -12,12 +12,19 @@ def request(path,body=None,token=None,method=None):
  except urllib.error.HTTPError as e:return e.code,json.loads(e.read())
 def rpc(token,owner,task,done,revision,op=None,note=None):
  return request('/rest/v1/rpc/tkb_set_task',{'p_day':day,'p_owner':owner,'p_task':task,'p_complete':done,'p_note':note,'p_operation_id':op or str(uuid.uuid4()),'p_expected_revision':revision,'p_changed_at':now},token)
-now=datetime.datetime.now(datetime.timezone.utc).isoformat();day=(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(hours=7)).date().isoformat()
+test_time=datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=29)
+now=test_time.isoformat();day=(test_time+datetime.timedelta(hours=7)).date().isoformat()
 sessions={}
+login_times={}
 for role in ['khoi','nhan','parents']:
- code,data=request('/functions/v1/tkb-login',{'role':role,'password':os.environ['PW_'+role]});assert code==200,(role,code,data)
+ started=time.perf_counter()
+ code,data=request('/functions/v1/tkb-login',{'role':role,'password':os.environ['PW_'+role],'day':day});login_times[role]=time.perf_counter()-started;assert code==200,(role,code,data)
+ expected={'khoi','nhan'} if role=='parents' else {role}
+ assert data['bootstrap']['role']==role and data['bootstrap']['day']==day
+ assert {x['student'] for x in data['bootstrap']['schedules']}==expected
+ assert isinstance(data['bootstrap']['tasks'],list)
  sessions[role]=data['access_token']
- code,rows=request('/rest/v1/tkb_timetables?select=student',token=sessions[role]);assert code==200 and {x['student'] for x in rows}==({'khoi','nhan'} if role=='parents' else {role})
+ code,rows=request('/rest/v1/tkb_timetables?select=student',token=sessions[role]);assert code==200 and {x['student'] for x in rows}==expected
 assert request('/functions/v1/tkb-login',{'role':'khoi','password':'wrong-test-password'})[0]==401
 assert request('/rest/v1/tkb_tasks?select=*')[0] in (401,403)
 assert request('/auth/v1/signup',{'email':'disabled@example.com','password':'long-random-test-password'})[0] in (400,422)
@@ -44,4 +51,4 @@ try:
 finally:
  rows=request(path,token=c['service_role'])[1]
  if rows and rows[0]['revision']<=3:assert request(path+'&revision=eq.'+str(rows[0]['revision']),token=c['service_role'],method='DELETE')[0]==204
-print('PASS: all three passwords; wrong password; signup disabled; anonymous denied; per-child schedules; parents read-only; no role escalation; race, owner-only undo, idempotency, stale conflict and three-session visibility.')
+print('PASS: one-response login bootstrap; all three passwords; wrong password; signup disabled; anonymous denied; per-child schedules; parents read-only; no role escalation; race, owner-only undo, idempotency, stale conflict and three-session visibility. Login seconds:',{role:round(value,3) for role,value in login_times.items()})

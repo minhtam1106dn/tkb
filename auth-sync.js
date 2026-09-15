@@ -1,7 +1,7 @@
 (() => {
  'use strict';
  const config=window.TKB_CONFIG;
- let session=null,profile=null,activeDay=null,generation=0,status='',timer=null;
+ let session=null,profile=null,activeDay=null,generation=0,status='',timer=null,warmed=false;
  let state={days:{},queue:[]},storageKey='',refreshing=null,flushing=null,pulling=null;
  const listeners=new Set();
  const emit=()=>listeners.forEach(fn=>fn());
@@ -91,23 +91,43 @@
   pulling=(async()=>{await flush();await pull();})().catch(error=>{if(version===generation)failure(error);}).finally(()=>{pulling=null;});
   return pulling;
  }
+ function warmup(){
+  if(warmed || !navigator.onLine)return;
+  warmed=true;
+  fetch(`${config.url}/functions/v1/tkb-login`,{method:'OPTIONS',headers:{apikey:config.anonKey},cache:'no-store',signal:AbortSignal.timeout(4000)})
+   .catch(()=>{warmed=false;});
+ }
  async function login(role,password){
-  const r=await request('/functions/v1/tkb-login',{role,password});
+  const requestedDay=activeDay;
+  const r=await request('/functions/v1/tkb-login',{role,password,day:requestedDay});
   if(!r.ok)throw new Error(r.status===401?'Mật khẩu chưa đúng.':r.status===429?'Bạn đã thử nhiều lần. Vui lòng thử lại sau 15 phút.':'Không thể đăng nhập. Kiểm tra mạng rồi thử lại.');
   const next=await r.json();
   if(!next.access_token || !next.user?.id)throw new Error('Phản hồi đăng nhập không hợp lệ.');
   generation++;session=next;
   try{
-   const profiles=await api('/rest/v1/tkb_profiles?select=role');
-   if(profiles.length!==1 || profiles[0].role!==role)throw new Error('Tài khoản chưa được cấu hình đúng quyền.');
+   const bootstrap=next.bootstrap?.role===role && next.bootstrap.day===requestedDay?next.bootstrap:null;
    profile={role,id:next.user.id};
    storageKey=`tkb-cloud:v1:${new URL(config.url).hostname}:${profile.id}`;
    load();
-   const schedules=await api('/rest/v1/tkb_timetables?select=student,days');
-   status='Đã đăng nhập';
-   await importLocal();await sync();
+   let schedules,rows;
+   if(bootstrap){
+    schedules=bootstrap.schedules;rows=bootstrap.tasks;
+   }else{
+    const [profiles,loadedSchedules,loadedRows]=await Promise.all([
+     api('/rest/v1/tkb_profiles?select=role'),
+     api('/rest/v1/tkb_timetables?select=student,days'),
+     requestedDay?api(`/rest/v1/tkb_tasks?day=eq.${encodeURIComponent(requestedDay)}&select=*`):Promise.resolve([]),
+    ]);
+    if(profiles.length!==1 || profiles[0].role!==role)throw new Error('Tài khoản chưa được cấu hình đúng quyền.');
+    schedules=loadedSchedules;rows=loadedRows;
+   }
+   if(rows.length)await lock(()=>{load();for(const row of rows)cacheRow(row);persist();});
+   status=state.queue.length?'Đang đồng bộ':'Đã đồng bộ';
    clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)sync();},5000);
-   emit();return {role,schedules};
+   emit();
+   const version=generation;
+   setTimeout(()=>{if(version===generation)importLocal().then(sync).catch(error=>{if(version===generation)failure(error);});},0);
+   return {role,schedules};
   }catch(error){logout();throw error;}
  }
  function logout(){
@@ -148,7 +168,7 @@
   }
   if(version===generation)localStorage.setItem(marker,'1');
  }
- window.TKBCloud={login,logout,save,sync,
+ window.TKBCloud={login,logout,save,sync,warmup,
   get role(){return profile?.role;},get status(){return status;},
   getCompletion(day,owner,id){if(!profile)return null;const r=viewRow(day,owner,id);return r?.completed?{completedAt:r.completed_at,completedBy:r.completed_by,note:r.note,pending:!!r.pending}:null;},
   watchDate(day){if(day===activeDay)return;activeDay=day;if(profile)pull(day).catch(failure);},

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f6f8fc">
+<link rel="preconnect" href="https://sundoeijcnaqunpsajgr.supabase.co" crossorigin>
 <link rel="icon" type="image/jpeg" href="./images.jpeg">
 <link rel="stylesheet" href="./checklist.css">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -130,6 +131,7 @@ viewerDialog.addEventListener('close',()=>{if(!currentViewer && !viewerDialog.op
 document.getElementById('change-viewer').addEventListener('click',openViewerDialog);
 document.querySelectorAll('[data-viewer]').forEach(button=>button.addEventListener('click',()=>{
  if(loginBusy)return;
+ window.TKBCloud?.warmup();
  loginRole=button.dataset.viewer;loginForm.hidden=false;
  const name=button.querySelector('strong').textContent;
  document.getElementById('login-name').textContent=name;
@@ -147,6 +149,7 @@ document.getElementById('password-toggle').addEventListener('click',event=>{
 loginForm.addEventListener('submit',async event=>{
  event.preventDefault();if(loginBusy || !loginRole)return;
  loginBusy=true;
+ loginForm.setAttribute('aria-busy','true');
  const submit=document.getElementById('login-submit');
  submit.textContent='Đang đăng nhập…';
  viewerDialog.querySelectorAll('button').forEach(b=>b.disabled=true);
@@ -162,7 +165,7 @@ loginForm.addEventListener('submit',async event=>{
   document.getElementById('app').hidden=false;render();viewerDialog.close();
   document.getElementById('page-heading').focus({preventScroll:true});
  }catch(error){document.getElementById('login-error').textContent=error.message||'Không thể đăng nhập. Vui lòng thử lại.';passwordInput.focus();}
- finally{loginBusy=false;submit.textContent='Đăng nhập';viewerDialog.querySelectorAll('button').forEach(b=>b.disabled=false);}
+ finally{loginBusy=false;loginForm.removeAttribute('aria-busy');submit.textContent='Đăng nhập';viewerDialog.querySelectorAll('button').forEach(b=>b.disabled=false);}
 });
 window.TKBCloud?.subscribe(()=>{document.getElementById('sync-status').textContent=window.TKBCloud.status;});
 openViewerDialog();
