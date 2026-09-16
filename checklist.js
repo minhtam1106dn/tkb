@@ -28,7 +28,7 @@
  }
  let lastToday = today();
  let selectedDate = lastToday;
- let selectedView = 'dashboard';
+ let selectedView = 'today';
  const byId = id => document.getElementById(id);
  const keyFor = (owner,id) => `${prefix}${selectedDate}:${owner}:${id}`;
  function getCompletion(owner,id) {
@@ -43,13 +43,13 @@
   return record;
  }
  function setView(view) {
-  if(!['dashboard','leaderboard','schedule','checklist'].includes(view))return;
+  if(!['today','dashboard','leaderboard','schedule','checklist'].includes(view))return;
   selectedView = view;
-  for(const id of ['dashboard','leaderboard','schedule','checklist'])byId(id).hidden=view!==id;
+  for(const id of ['today','dashboard','leaderboard','schedule','checklist'])byId(id).hidden=view!==id;
   document.querySelector('.skip').href = `#${view}`;
   document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.view===view)));
-  document.querySelector('.students').hidden=currentViewer!=='parents' || ['dashboard','leaderboard'].includes(view);
-  const familyDashboard=['dashboard','leaderboard'].includes(view) && currentViewer==='parents';
+  document.querySelector('.students').hidden=currentViewer!=='parents' || ['today','dashboard','leaderboard'].includes(view);
+  const familyDashboard=['today','dashboard','leaderboard'].includes(view) && currentViewer==='parents';
   byId('student-name').textContent=familyDashboard?'Thanh Khôi & Thanh Nhân':students[selectedStudent].name;
   byId('student-footer').textContent=familyDashboard?'Thanh Khôi & Thanh Nhân':`${students[selectedStudent].name} · Lớp ${students[selectedStudent].className}`;
   try { localStorage.setItem('tkb-view',view); } catch (_) {}

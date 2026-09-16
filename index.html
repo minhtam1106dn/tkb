@@ -23,7 +23,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 </style>
 </head>
 <body>
-<a class="skip" href="#dashboard">Đến nội dung chính</a>
+<a class="skip" href="#today">Đến nội dung chính</a>
 <dialog id="viewer-dialog" aria-labelledby="viewer-title" aria-describedby="viewer-description">
 <div class="viewer-mark" aria-hidden="true">TKB</div><h2 id="viewer-title">Ai đang xem hôm nay?</h2>
 <p id="viewer-description">Chọn tên để mở lịch học và việc mỗi ngày.</p>
@@ -42,9 +42,10 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <div class="viewer-bar"><button id="change-viewer">Đổi người xem</button></div>
 <div class="heading"><div><h1 id="page-heading" tabindex="-1" aria-live="polite"><strong id="student-name">Nguyễn Thanh Khôi</strong></h1></div></div>
 <div class="students" role="group" aria-label="Chọn bạn"><button data-student="khoi" aria-pressed="true">Thanh Khôi</button><button data-student="nhan" aria-pressed="false">Thanh Nhân</button></div>
-<nav class="view-switch" aria-label="Nội dung"><button data-view="dashboard" aria-pressed="true" aria-controls="dashboard">Tổng quan</button><button data-view="leaderboard" aria-pressed="false" aria-controls="leaderboard">Xếp hạng</button><button data-view="schedule" aria-pressed="false" aria-controls="schedule">Thời khóa biểu</button><button data-view="checklist" aria-pressed="false" aria-controls="checklist">Việc mỗi ngày</button></nav>
+<nav class="view-switch" aria-label="Nội dung"><button data-view="today" aria-pressed="true" aria-controls="today">Hôm nay</button><button data-view="dashboard" aria-pressed="false" aria-controls="dashboard">Tổng quan</button><button data-view="leaderboard" aria-pressed="false" aria-controls="leaderboard">Xếp hạng</button><button data-view="schedule" aria-pressed="false" aria-controls="schedule">Thời khóa biểu</button><button data-view="checklist" aria-pressed="false" aria-controls="checklist">Việc mỗi ngày</button></nav>
 </header>
-<section id="dashboard" aria-labelledby="dashboard-title">
+<section id="today" aria-labelledby="today-title"><div class="today-heading"><div><p class="today-kicker">Lịch học trong ngày</p><h2 id="today-title">Hôm nay</h2><p id="today-date"></p></div></div><div id="today-summary" class="today-summary"></div><div id="today-content" class="today-grid"></div></section>
+<section id="dashboard" aria-labelledby="dashboard-title" hidden>
 <div class="dashboard-toolbar">
 <div><h2 id="dashboard-title">Tổng quan việc mỗi ngày</h2><p id="dashboard-period-label"></p></div>
 <div class="dashboard-range" role="group" aria-label="Phạm vi thống kê"><button data-dashboard-range="day" aria-pressed="true">Ngày</button><button data-dashboard-range="week" aria-pressed="false">Tuần</button><button data-dashboard-range="month" aria-pressed="false">Tháng</button></div>
@@ -100,10 +101,27 @@ try {
 
 // Preserve period numbers from each school timetable; bell times were not provided.
 const currentDay = Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',weekday:'short'}).format(new Date()).replace(/Sun|Mon|Tue|Wed|Thu|Fri|Sat/g, d=>({Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[d])));
+function renderToday(){
+ const now=new Date();
+ const weekday=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',weekday:'short'}).format(now).replace(/Sun|Mon|Tue|Wed|Thu|Fri|Sat/g,d=>({Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[d])));
+ document.getElementById('today-date').textContent=new Intl.DateTimeFormat('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',weekday:'long',day:'numeric',month:'numeric',year:'numeric'}).format(now);
+ const visible=currentViewer==='parents'?['khoi','nhan']:[currentViewer];
+ document.getElementById('today-summary').innerHTML=visible.map(key=>{
+  const student=students[key],day=student.days[weekday-1];
+  return `<article class="today-snapshot"><h3>${student.name.replace('Nguyễn ','')}</h3><p><strong>Ở trường:</strong> ${day?(day.school?.length||0)+(day.second?.length||0)+' tiết':'Không có lịch'}</p><p><strong>Học thêm:</strong> ${day?.extra?.length?day.extra.map(item=>`${item[0]}–${item[1]} ${item[2]}`).join(' · '):'Không có'}</p></article>`;
+ }).join('');
+ document.getElementById('today-content').innerHTML=visible.map(key=>{
+  const student=students[key],day=student.days[weekday-1];
+  if(!day)return `<article class="today-card"><h3>${student.name.replace('Nguyễn ','')}</h3><p class="today-empty">Hôm nay không có lịch học.</p></article>`;
+  const extras=day.extra||[];
+  const school=(items,start)=>items?.length?`<ol class="today-periods">${items.map((item,i)=>item?`<li><span>Tiết ${start+i}</span><strong>${item[0]}</strong></li>`:'').join('')}</ol>`:'';
+  return `<article class="today-card"><div class="today-card-head"><div><h3>${student.name.replace('Nguyễn ','')}</h3><span>Lớp ${student.className}</span></div><span class="today-count">${extras.length} buổi học thêm</span></div><section class="today-extra"><h4>Học thêm hôm nay</h4>${extras.length?`<ul>${extras.map(item=>`<li><strong>${item[0]}–${item[1]}</strong><span>${item[2]}</span></li>`).join('')}</ul>`:'<p>Không có lịch học thêm.</p>'}</section><div class="today-school"><section><h4>Ở trường · Sáng</h4>${school(day.school,1)||'<p>Không có tiết học.</p>'}</section>${day.second?.length?`<section><h4>Ở trường · Chiều</h4>${school(day.second,day.secondStart||1)}</section>`:''}</div></article>`;
+ }).join('');
+}
 function periods(items, start=1){return '<ol class="periods">'+items.map((item,i)=>item?`<li value="${i+start}"><span class="period-number" aria-label="Tiết ${i+start}">${i+start}</span><div class="subject">${item[0]}${item[1]?`<span class="teacher">${item[1]}</span>`:''}</div></li>`:'').join('')+'</ol>';}
 function render(){
  if (currentViewer && currentViewer !== 'parents') selectedStudent=currentViewer;
- const familyDashboard=currentViewer==='parents' && ['dashboard','leaderboard'].some(id=>document.getElementById(id).hidden===false);
+ const familyDashboard=currentViewer==='parents' && ['today','dashboard','leaderboard'].some(id=>document.getElementById(id).hidden===false);
  document.querySelector('.students').hidden=currentViewer!=='parents' || familyDashboard;
  const student = students[selectedStudent];
  const filter = selectedFilter;
@@ -116,7 +134,7 @@ function render(){
  <div class="day-head"><h3 id="day-${i}">${day.name}</h3>${currentDay===i+1?'<span class="today-badge">Hôm nay</span>':''}</div>
  ${filter!=='extra'?`${day.school.length?`<section class="group"><h4 class="group-title">Ở trường · Sáng</h4>${periods(day.school)}</section>`:''}${day.second?`<section class="group"><h4 class="group-title">Ở trường · Chiều</h4>${periods(day.second,day.secondStart || 1)}</section>`:''}${!day.school.length&&!day.second?'<section class="group"><h4 class="group-title">Ở trường</h4><p class="empty">Không có lịch ở trường</p></section>':''}`:''}
  ${filter!=='school'?`<section class="group extra-group"><h4 class="group-title">Học thêm</h4>${day.extra.length?'<ul class="lessons">'+day.extra.map(lesson=>`<li><time>${lesson[0]} – ${lesson[1]}</time><div class="subject">${lesson[2]}</div></li>`).join('')+'</ul>':'<p class="empty">Không có lịch học thêm</p>'}</section>`:''}</article>`).join('');
- window.renderChecklist?.();window.renderDashboard?.();
+ renderToday();window.renderChecklist?.();window.renderDashboard?.();
 }
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{selectedFilter=button.dataset.filter;render();}));
 document.querySelectorAll('[data-student]').forEach(button=>button.addEventListener('click',()=>{
@@ -183,7 +201,7 @@ loginForm.addEventListener('submit',async event=>{
   for(const student of Object.values(students))student.days=[];
   for(const item of schedules)if(Object.hasOwn(students,item.student))students[item.student].days=item.days;
   currentViewer=role;if(role!=='parents')selectedStudent=role;
-  document.getElementById('app').hidden=false;window.setAppView?.('dashboard');render();viewerDialog.close();
+  document.getElementById('app').hidden=false;window.setAppView?.('today');render();viewerDialog.close();
   document.getElementById('page-heading').focus({preventScroll:true});
  }catch(error){document.getElementById('login-error').textContent=error.message||'Không thể đăng nhập. Vui lòng thử lại.';passwordInput.focus();}
  finally{loginBusy=false;loginForm.removeAttribute('aria-busy');submit.textContent='Đăng nhập';viewerDialog.querySelectorAll('button').forEach(b=>b.disabled=false);}
