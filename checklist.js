@@ -48,8 +48,10 @@
   for(const id of ['today','dashboard','leaderboard','schedule','checklist'])byId(id).hidden=view!==id;
   document.querySelector('.skip').href = `#${view}`;
   document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.view===view)));
-  document.querySelector('.students').hidden=currentViewer!=='parents' || ['today','dashboard','leaderboard'].includes(view);
-  const familyDashboard=['today','dashboard','leaderboard'].includes(view) && currentViewer==='parents';
+  const studentControls=document.querySelector('.students');
+  if(view==='schedule' || view==='checklist')byId(view).querySelector('.panel-toolbar').after(studentControls);
+  studentControls.hidden=currentViewer!=='parents' || !['schedule','checklist'].includes(view);
+  const familyDashboard=currentViewer==='parents';
   byId('student-name').textContent=familyDashboard?'Thanh Khôi & Thanh Nhân':students[selectedStudent].name;
   byId('student-footer').textContent=familyDashboard?'Thanh Khôi & Thanh Nhân':`${students[selectedStudent].name} · Lớp ${students[selectedStudent].className}`;
   try { localStorage.setItem('tkb-view',view); } catch (_) {}

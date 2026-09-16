@@ -44,7 +44,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <div class="students" role="group" aria-label="Chọn bạn"><button data-student="khoi" aria-pressed="true">Thanh Khôi</button><button data-student="nhan" aria-pressed="false">Thanh Nhân</button></div>
 <nav class="view-switch" aria-label="Nội dung"><button data-view="today" aria-pressed="true" aria-controls="today">Hôm nay</button><button data-view="dashboard" aria-pressed="false" aria-controls="dashboard">Tổng quan</button><button data-view="leaderboard" aria-pressed="false" aria-controls="leaderboard">Xếp hạng</button><button data-view="schedule" aria-pressed="false" aria-controls="schedule">Thời khóa biểu</button><button data-view="checklist" aria-pressed="false" aria-controls="checklist">Việc mỗi ngày</button></nav>
 </header>
-<section id="today" aria-labelledby="today-title"><div class="today-heading"><div><p class="today-kicker">Lịch học trong ngày</p><h2 id="today-title">Hôm nay</h2><p id="today-date"></p></div></div><div id="today-summary" class="today-summary"></div><div id="today-content" class="today-grid"></div></section>
+<section id="today" aria-labelledby="today-title"><div class="today-heading"><div><h2 id="today-title">Hôm nay</h2><p id="today-date"></p></div></div><div id="today-summary" class="today-summary"></div><div id="today-content" class="today-grid"></div></section>
 <section id="dashboard" aria-labelledby="dashboard-title" hidden>
 <div class="dashboard-toolbar">
 <div><h2 id="dashboard-title">Tổng quan việc mỗi ngày</h2><p id="dashboard-period-label"></p></div>
@@ -121,8 +121,8 @@ function renderToday(){
 function periods(items, start=1){return '<ol class="periods">'+items.map((item,i)=>item?`<li value="${i+start}"><span class="period-number" aria-label="Tiết ${i+start}">${i+start}</span><div class="subject">${item[0]}${item[1]?`<span class="teacher">${item[1]}</span>`:''}</div></li>`:'').join('')+'</ol>';}
 function render(){
  if (currentViewer && currentViewer !== 'parents') selectedStudent=currentViewer;
- const familyDashboard=currentViewer==='parents' && ['today','dashboard','leaderboard'].some(id=>document.getElementById(id).hidden===false);
- document.querySelector('.students').hidden=currentViewer!=='parents' || familyDashboard;
+ const familyDashboard=currentViewer==='parents';
+ document.querySelector('.students').hidden=currentViewer!=='parents' || (document.getElementById('schedule').hidden && document.getElementById('checklist').hidden);
  const student = students[selectedStudent];
  const filter = selectedFilter;
  document.getElementById('student-name').textContent = familyDashboard?'Thanh Khôi & Thanh Nhân':student.name;
