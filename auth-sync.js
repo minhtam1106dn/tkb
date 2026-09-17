@@ -1,11 +1,23 @@
 (() => {
  'use strict';
  const config=window.TKB_CONFIG;
+ const sessionKey=`tkb-session:v1:${new URL(config.url).hostname}`;
  let session=null,profile=null,activeDay=null,generation=0,status='',timer=null,warmed=false;
  let state={days:{},queue:[]},storageKey='',refreshing=null,flushing=null,pulling=null;
  const listeners=new Set();
  const emit=()=>listeners.forEach(fn=>fn());
  const empty=()=>({days:{},queue:[],leaderboards:{}});
+ function savedSession(){
+  try{
+   const saved=JSON.parse(localStorage.getItem(sessionKey));
+   return saved && ['khoi','nhan','parents'].includes(saved.role) && saved.refresh_token && saved.user?.id?saved:null;
+  }catch(_){return null;}
+ }
+ function persistSession(){
+  if(!session || !profile)return;
+  try{localStorage.setItem(sessionKey,JSON.stringify({role:profile.role,user:{id:profile.id},refresh_token:session.refresh_token}));}
+  catch(_){status='Trình duyệt không lưu được phiên đăng nhập';emit();}
+ }
  function load(){
   const raw=localStorage.getItem(storageKey);
   const next=raw?JSON.parse(raw):empty();
@@ -23,11 +35,16 @@
   if(!refreshing){
    const version=generation,token=session.refresh_token;
    refreshing=(async()=>{
-    const r=await request('/auth/v1/token?grant_type=refresh_token',{refresh_token:token});
-    if(!r.ok)throw new Error('Phiên đăng nhập đã hết hạn. Hãy chọn Đổi người xem để đăng nhập lại.');
-    const next=await r.json();
-    if(version!==generation)throw new Error('Người dùng đã thay đổi.');
-    session=next;
+    const renew=async()=>{
+     const latest=savedSession();
+     const refreshToken=latest?.user.id===profile?.id?latest.refresh_token:token;
+     const r=await request('/auth/v1/token?grant_type=refresh_token',{refresh_token:refreshToken});
+     if(!r.ok)throw new Error('Phiên đăng nhập đã hết hạn. Hãy chọn Đổi người xem để đăng nhập lại.');
+     const next=await r.json();
+     if(version!==generation)throw new Error('Người dùng đã thay đổi.');
+     session=next;persistSession();
+    };
+    return navigator.locks?navigator.locks.request(sessionKey,renew):renew();
    })().finally(()=>{refreshing=null;});
   }
   return refreshing;
@@ -145,15 +162,10 @@
   fetch(`${config.url}/functions/v1/tkb-login`,{method:'OPTIONS',headers:{apikey:config.anonKey},cache:'no-store',signal:AbortSignal.timeout(4000)})
    .catch(()=>{warmed=false;});
  }
- async function login(role,password){
+ async function activate(role,next,bootstrap){
   const requestedDay=activeDay;
-  const r=await request('/functions/v1/tkb-login',{role,password,day:requestedDay});
-  if(!r.ok)throw new Error(r.status===401?'Mật khẩu chưa đúng.':r.status===429?'Bạn đã thử nhiều lần. Vui lòng thử lại sau 15 phút.':'Không thể đăng nhập. Kiểm tra mạng rồi thử lại.');
-  const next=await r.json();
-  if(!next.access_token || !next.user?.id)throw new Error('Phản hồi đăng nhập không hợp lệ.');
   generation++;session=next;
   try{
-   const bootstrap=next.bootstrap?.role===role && next.bootstrap.day===requestedDay?next.bootstrap:null;
    profile={role,id:next.user.id};
    storageKey=`tkb-cloud:v1:${new URL(config.url).hostname}:${profile.id}`;
    load();
@@ -171,6 +183,7 @@
    }
    if(rows.length)await lock(()=>{load();for(const row of rows)cacheRow(row);persist();});
    status=state.queue.length?'Đang đồng bộ':'Đã đồng bộ';
+   persistSession();
    clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)sync();},5000);
    emit();
    const version=generation;
@@ -178,10 +191,37 @@
    return {role,schedules};
   }catch(error){logout();throw error;}
  }
+ async function login(role,password){
+  const r=await request('/functions/v1/tkb-login',{role,password,day:activeDay});
+  if(!r.ok)throw new Error(r.status===401?'Mật khẩu chưa đúng.':r.status===429?'Bạn đã thử nhiều lần. Vui lòng thử lại sau 15 phút.':'Không thể đăng nhập. Kiểm tra mạng rồi thử lại.');
+  const next=await r.json();
+  if(!next.access_token || !next.refresh_token || !next.user?.id)throw new Error('Phản hồi đăng nhập không hợp lệ.');
+  const bootstrap=next.bootstrap?.role===role && next.bootstrap.day===activeDay?next.bootstrap:null;
+  return activate(role,next,bootstrap);
+ }
+ async function restore(){
+  const saved=savedSession();
+  if(!saved || !navigator.onLine)return null;
+  try{
+   const renew=async()=>{
+    const latest=savedSession();
+    if(!latest)return null;
+    const r=await request('/auth/v1/token?grant_type=refresh_token',{refresh_token:latest.refresh_token});
+    if(r.status===400 || r.status===401){localStorage.removeItem(sessionKey);return null;}
+    if(!r.ok)throw new Error('Chưa khôi phục được phiên đăng nhập.');
+    const next=await r.json();
+    if(next.user?.id!==latest.user.id){localStorage.removeItem(sessionKey);return null;}
+    return {role:latest.role,session:next};
+   };
+   const result=navigator.locks?await navigator.locks.request(sessionKey,renew):await renew();
+   if(!result)return null;
+   return await activate(result.role,result.session,null);
+  }catch(error){return null;}
+ }
  function logout(){
   const token=session?.access_token;
   generation++;session=null;profile=null;state=empty();clearInterval(timer);timer=null;status='';
-  // Access and refresh tokens stay in memory, never in the public source or persistent cache.
+  try{localStorage.removeItem(sessionKey);}catch(_){}
   if(token)fetch(config.url+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:config.anonKey,Authorization:'Bearer '+token},signal:AbortSignal.timeout(10000)}).catch(()=>{});
   emit();
  }
@@ -216,7 +256,7 @@
   }
   if(version===generation)localStorage.setItem(marker,'1');
  }
- window.TKBCloud={login,logout,save,sync,warmup,loadRange,loadLeaderboard,
+ window.TKBCloud={login,restore,logout,save,sync,warmup,loadRange,loadLeaderboard,
   get role(){return profile?.role;},get status(){return status;},
   getRows(from,to){return profile?rowsBetween(from,to):[];},
   getCompletion(day,owner,id){if(!profile)return null;const r=viewRow(day,owner,id);return r?.completed?{completedAt:r.completed_at,completedBy:r.completed_by,note:r.note,pending:!!r.pending}:null;},
@@ -228,4 +268,5 @@
  window.addEventListener('focus',sync);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync();});
  window.addEventListener('storage',event=>{if(profile && event.key===storageKey){try{load();emit();}catch(error){failure(error);}}});
+ window.addEventListener('storage',event=>{if(event.key===sessionKey && profile){if(!event.newValue)logout();else{const latest=savedSession();if(latest?.user.id===profile.id)session={...session,...latest};}}});
 })();

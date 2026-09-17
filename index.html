@@ -36,6 +36,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <button id="login-submit" type="submit">Đăng nhập</button>
 </form>
 </dialog>
+<p id="session-loading" role="status" style="margin:20vh auto 0;padding:24px;text-align:center;color:#53627a">Đang mở lịch học…</p>
 <main id="app" class="wrap" hidden>
 <header>
 <div class="topline"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h3m2 0h3"/></svg></span> Góc học tập</div>
@@ -150,6 +151,10 @@ let loginRole=null,loginBusy=false;
 function openViewerDialog(){
  if(loginBusy)return;
  currentViewer=null;window.TKBCloud?.logout();
+ showViewerDialog();
+}
+function showViewerDialog(){
+ document.getElementById('session-loading').hidden=true;
  students.khoi.days=[];students.nhan.days=[];
  document.getElementById('app').hidden=true;
  document.getElementById('week').replaceChildren();
@@ -198,16 +203,25 @@ loginForm.addEventListener('submit',async event=>{
   if(!window.TKBCloud)throw new Error('Chưa tải được đăng nhập. Hãy kiểm tra mạng và tải lại trang.');
   const {role,schedules}=await window.TKBCloud.login(loginRole,passwordInput.value);
   passwordInput.value='';
-  for(const student of Object.values(students))student.days=[];
-  for(const item of schedules)if(Object.hasOwn(students,item.student))students[item.student].days=item.days;
-  currentViewer=role;if(role!=='parents')selectedStudent=role;
-  document.getElementById('app').hidden=false;window.setAppView?.('today');render();viewerDialog.close();
+  showApp(role,schedules);
   document.getElementById('page-heading').focus({preventScroll:true});
  }catch(error){document.getElementById('login-error').textContent=error.message||'Không thể đăng nhập. Vui lòng thử lại.';passwordInput.focus();}
  finally{loginBusy=false;loginForm.removeAttribute('aria-busy');submit.textContent='Đăng nhập';viewerDialog.querySelectorAll('button').forEach(b=>b.disabled=false);}
 });
-openViewerDialog();
-window.addEventListener('pageshow',event=>{if(event.persisted)openViewerDialog();});
+function showApp(role,schedules){
+ for(const student of Object.values(students))student.days=[];
+ for(const item of schedules)if(Object.hasOwn(students,item.student))students[item.student].days=item.days;
+ currentViewer=role;if(role!=='parents')selectedStudent=role;
+ document.getElementById('session-loading').hidden=true;
+ document.getElementById('app').hidden=false;window.setAppView?.('today');render();if(viewerDialog.open)viewerDialog.close();
+}
+async function restoreSession(){
+ try{const restored=await window.TKBCloud?.restore();if(restored){showApp(restored.role,restored.schedules);return;}}
+ catch(_){}
+ showViewerDialog();
+}
+window.addEventListener('DOMContentLoaded',restoreSession,{once:true});
+window.addEventListener('pageshow',event=>{if(event.persisted && !currentViewer)restoreSession();});
 if ('serviceWorker'  in navigator) {
  window.addEventListener('load', () => {
   navigator.serviceWorker.register('./sw.js', {scope: './', updateViaCache: 'none'})
