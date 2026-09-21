@@ -43,7 +43,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <div class="viewer-bar"><button id="change-viewer">Đổi người xem</button></div>
 <div class="heading"><div><h1 id="page-heading" tabindex="-1" aria-live="polite"><strong id="student-name">Nguyễn Thanh Khôi</strong></h1></div></div>
 <div class="students" role="group" aria-label="Chọn bạn"><button data-student="khoi" aria-pressed="true">Thanh Khôi</button><button data-student="nhan" aria-pressed="false">Thanh Nhân</button></div>
-<nav class="view-switch" aria-label="Nội dung"><button data-view="today" aria-pressed="true" aria-controls="today">Hôm nay</button><button data-view="dashboard" aria-pressed="false" aria-controls="dashboard">Tổng quan</button><button data-view="leaderboard" aria-pressed="false" aria-controls="leaderboard">Xếp hạng</button><button data-view="schedule" aria-pressed="false" aria-controls="schedule">Thời khóa biểu</button><button data-view="checklist" aria-pressed="false" aria-controls="checklist">Việc mỗi ngày</button></nav>
+<nav class="view-switch" aria-label="Nội dung"><button data-view="today" aria-pressed="true" aria-controls="today">Hôm nay</button><button data-view="dashboard" aria-pressed="false" aria-controls="dashboard">Tổng quan</button><button data-view="leaderboard" aria-pressed="false" aria-controls="leaderboard">Xếp hạng</button><button data-view="fund" aria-pressed="false" aria-controls="fund">Quỹ ăn vặt</button><button data-view="schedule" aria-pressed="false" aria-controls="schedule">Thời khóa biểu</button><button data-view="checklist" aria-pressed="false" aria-controls="checklist">Việc mỗi ngày</button></nav>
 </header>
 <section id="today" aria-labelledby="today-title"><div class="today-heading"><div><h2 id="today-title">Hôm nay</h2><p id="today-date"></p></div></div><aside id="today-parent-note" class="today-parent-note" hidden><span>Lời nhắn hôm nay từ Ba Mẹ</span><p id="today-parent-note-message"></p></aside><div id="today-summary" class="today-summary"></div><div id="today-content" class="today-grid"></div></section>
 <section id="dashboard" aria-labelledby="dashboard-title" hidden>
@@ -84,6 +84,13 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <section class="task-group" aria-labelledby="common-title"><h3 id="common-title">Việc chung</h3><ul id="common-tasks" class="task-list"></ul></section>
 <section class="task-group" aria-labelledby="private-title"><h3 id="private-title">Việc riêng</h3><ul id="private-tasks" class="task-list"></ul></section>
 </div>
+</section>
+<section id="fund" aria-labelledby="fund-title" hidden>
+<div class="panel-toolbar"><div><h2 id="fund-title">Quỹ ăn vặt</h2><p class="fund-subtitle">Quỹ tiền mặt chung của Thanh Khôi và Thanh Nhân</p></div><div class="date-controls"><button data-fund-step="-1" aria-label="Ngày trước">←</button><div class="date-field"><label class="sr-only" for="fund-date">Ngày giao dịch</label><input id="fund-date" type="date" required></div><button data-fund-step="1" aria-label="Ngày sau">→</button><button id="fund-today">Hôm nay</button></div></div>
+<div class="fund-summary"><article class="fund-balance"><span>Số dư hiện tại</span><strong id="fund-balance">0 ₫</strong></article><article><span>Tổng tiền Ba Mẹ đã cho</span><strong id="fund-income">0 ₫</strong></article><article><span>Tổng đã chi</span><strong id="fund-expense">0 ₫</strong></article></div>
+<form id="fund-form" class="fund-form"><div><label id="fund-item-label" for="fund-item">Mặt hàng đã mua</label><input id="fund-item" maxlength="100" required placeholder="Ví dụ: Bánh mì, sữa…"></div><div><label for="fund-amount">Số tiền</label><div class="money-field"><input id="fund-amount" type="number" inputmode="numeric" min="1000" max="10000000" step="1000" required placeholder="20.000"><span>₫</span></div></div><button id="fund-submit" type="submit">Thêm khoản chi</button></form>
+<p id="fund-feedback" class="fund-feedback" role="status" aria-live="polite"></p><p id="fund-error" class="checklist-alert" role="alert"></p>
+<div class="fund-day-summary"><h3 id="fund-day-title">Giao dịch trong ngày</h3><strong id="fund-day-total"></strong></div><ul id="fund-list" class="fund-list"></ul>
 </section>
 <footer><span id="student-footer">Nguyễn Thanh Khôi · Lớp 6.7</span><span>Một tuần học tập thật tốt!</span></footer>
 </main>
@@ -241,5 +248,6 @@ if ('serviceWorker'  in navigator) {
 <script src="./checklist.js"></script>
 <script src="./dashboard.js"></script>
 <script src="./leaderboard.js"></script>
+<script src="./snack-fund.js"></script>
 </body>
 </html>

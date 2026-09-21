@@ -87,6 +87,61 @@ end $$;
 revoke all on function public.tkb_set_parent_note(date,text,text) from public,anon;
 grant execute on function public.tkb_set_parent_note(date,text,text) to authenticated;
 
+create table if not exists public.tkb_snack_fund (
+ id uuid primary key,
+ day date not null,
+ kind text not null check (kind in ('income','expense')),
+ child text check (child in ('khoi','nhan')),
+ item text not null check (length(item) between 1 and 100),
+ amount bigint not null check (amount between 1000 and 10000000),
+ created_by uuid not null references auth.users(id),
+ created_at timestamptz not null default now(),
+ check ((kind='income' and child is null) or (kind='expense' and child is not null))
+);
+alter table public.tkb_snack_fund enable row level security;
+revoke all on public.tkb_snack_fund from anon,authenticated;
+grant select on public.tkb_snack_fund to authenticated;
+drop policy if exists tkb_read_snack_fund on public.tkb_snack_fund;
+create policy tkb_read_snack_fund on public.tkb_snack_fund for select to authenticated
+ using (tkb_private.viewer_role() is not null);
+
+create or replace function public.tkb_add_snack_transaction(
+ p_id uuid,p_day date,p_kind text,p_item text,p_amount bigint
+) returns public.tkb_snack_fund
+language plpgsql security definer set search_path='' as $$
+declare actor text:=tkb_private.viewer_role();saved public.tkb_snack_fund%rowtype;
+begin
+ if actor is null or p_id is null or p_day is null or p_kind not in ('income','expense')
+   or p_item is null or length(btrim(p_item)) not between 1 and 100
+   or p_amount not between 1000 and 10000000
+   or p_day>(now() at time zone 'Asia/Ho_Chi_Minh')::date
+   or p_day<(now() at time zone 'Asia/Ho_Chi_Minh')::date-30 then raise exception 'Invalid transaction'; end if;
+ if (actor='parents' and p_kind<>'income') or (actor<>'parents' and p_kind<>'expense') then
+  raise exception 'Not allowed' using errcode='42501'; end if;
+ insert into public.tkb_snack_fund(id,day,kind,child,item,amount,created_by)
+ values(p_id,p_day,p_kind,case when p_kind='expense' then actor else null end,btrim(p_item),p_amount,auth.uid())
+ on conflict(id) do nothing returning * into saved;
+ if saved.id is null then select * into saved from public.tkb_snack_fund where id=p_id and created_by=auth.uid(); end if;
+ if saved.id is null then raise exception 'Transaction conflict'; end if;
+ return saved;
+end $$;
+revoke all on function public.tkb_add_snack_transaction(uuid,date,text,text,bigint) from public,anon;
+grant execute on function public.tkb_add_snack_transaction(uuid,date,text,text,bigint) to authenticated;
+
+create or replace function public.tkb_delete_snack_transaction(p_id uuid) returns void
+language plpgsql security definer set search_path='' as $$
+declare actor text:=tkb_private.viewer_role();entry public.tkb_snack_fund%rowtype;
+begin
+ select * into entry from public.tkb_snack_fund where id=p_id;
+ if entry.id is null then return; end if;
+ if actor is null or (actor<>'parents' and (entry.created_by<>auth.uid() or entry.kind<>'expense'
+   or entry.day<>(now() at time zone 'Asia/Ho_Chi_Minh')::date)) then
+  raise exception 'Not allowed' using errcode='42501'; end if;
+ delete from public.tkb_snack_fund where id=p_id;
+end $$;
+revoke all on function public.tkb_delete_snack_transaction(uuid) from public,anon;
+grant execute on function public.tkb_delete_snack_transaction(uuid) to authenticated;
+
 create table if not exists tkb_private.operations (
  user_id uuid not null references auth.users(id) on delete cascade,
  operation_id uuid not null,
@@ -234,4 +289,4 @@ revoke all on function public.tkb_login_attempt(text) from public,anon,authentic
 grant execute on function public.tkb_login_attempt(text) to service_role;
 
 -- Automatic grants are disabled for this project; grant administration explicitly.
-grant all on public.tkb_profiles,public.tkb_timetables,public.tkb_tasks,public.tkb_parent_notes to service_role;
+grant all on public.tkb_profiles,public.tkb_timetables,public.tkb_tasks,public.tkb_parent_notes,public.tkb_snack_fund to service_role;

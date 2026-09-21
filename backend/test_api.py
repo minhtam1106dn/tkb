@@ -43,6 +43,19 @@ try:
  assert request('/rest/v1/rpc/tkb_set_parent_note',{'p_day':day,'p_child':'khoi','p_message':'Không được phép'},sessions['khoi'])[0]==403
 finally:
  request(note_path,token=c['service_role'],method='DELETE')
+fund_ids=[str(uuid.uuid4()),str(uuid.uuid4())]
+try:
+ code,income=request('/rest/v1/rpc/tkb_add_snack_transaction',{'p_id':fund_ids[0],'p_day':day,'p_kind':'income','p_item':'Nạp quỹ kiểm thử','p_amount':100000},sessions['parents'])
+ assert code==200 and income['kind']=='income' and income['child'] is None
+ code,expense=request('/rest/v1/rpc/tkb_add_snack_transaction',{'p_id':fund_ids[1],'p_day':day,'p_kind':'expense','p_item':'Bữa trưa kiểm thử','p_amount':25000},sessions['khoi'])
+ assert code==200 and expense['child']=='khoi'
+ assert request('/rest/v1/tkb_snack_fund?id=in.('+','.join(fund_ids)+')&select=*',token=sessions['nhan'])[0]==200
+ assert request('/rest/v1/rpc/tkb_add_snack_transaction',{'p_id':str(uuid.uuid4()),'p_day':day,'p_kind':'income','p_item':'Không được phép','p_amount':1000},sessions['khoi'])[0]==403
+ assert request('/rest/v1/rpc/tkb_delete_snack_transaction',{'p_id':fund_ids[1]},sessions['nhan'])[0]==403
+ assert request('/rest/v1/rpc/tkb_delete_snack_transaction',{'p_id':fund_ids[1]},sessions['parents'])[0]==200
+ fund_ids.pop()
+finally:
+ for fund_id in fund_ids:request('/rest/v1/tkb_snack_fund?id=eq.'+fund_id,token=c['service_role'],method='DELETE')
 # Test one previously absent shared task; delete only the test record after verification.
 path='/rest/v1/tkb_tasks?day=eq.'+day+'&owner=eq.shared&task_id=eq.fish'
 assert request(path,token=c['service_role'])[1]==[], 'Task exists; will not overwrite household data'
@@ -62,4 +75,4 @@ try:
 finally:
  rows=request(path,token=c['service_role'])[1]
  if rows and rows[0]['revision']<=3:assert request(path+'&revision=eq.'+str(rows[0]['revision']),token=c['service_role'],method='DELETE')[0]==204
-print('PASS: one-response login bootstrap; all three passwords; wrong password; signup disabled; anonymous denied; per-child schedules; parents read-only; no role escalation; parent-note permissions; race, owner-only undo, idempotency, stale conflict and three-session visibility. Login seconds:',{role:round(value,3) for role,value in login_times.items()})
+print('PASS: one-response login bootstrap; all three passwords; wrong password; signup disabled; anonymous denied; per-child schedules; parents read-only; no role escalation; parent-note and snack-fund permissions; race, owner-only undo, idempotency, stale conflict and three-session visibility. Login seconds:',{role:round(value,3) for role,value in login_times.items()})

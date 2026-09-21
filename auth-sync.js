@@ -6,7 +6,7 @@
  let state={days:{},queue:[]},storageKey='',refreshing=null,flushing=null,pulling=null;
  const listeners=new Set();
  const emit=()=>listeners.forEach(fn=>fn());
- const empty=()=>({days:{},queue:[],leaderboards:{},notes:{}});
+ const empty=()=>({days:{},queue:[],leaderboards:{},notes:{},fund:[]});
  function savedSession(){
   try{
    const saved=JSON.parse(localStorage.getItem(sessionKey));
@@ -24,6 +24,7 @@
   if(!next || !next.days || !Array.isArray(next.queue))throw new Error('Không đọc được dữ liệu trên thiết bị.');
   if(!next.leaderboards || typeof next.leaderboards!=='object')next.leaderboards={};
   if(!next.notes || typeof next.notes!=='object')next.notes={};
+  if(!Array.isArray(next.fund))next.fund=[];
   state=next;
  }
  function persist(){localStorage.setItem(storageKey,JSON.stringify(state));}
@@ -257,6 +258,22 @@
   await lock(()=>{load();const key=`${day}:${child}`;if(clean)state.notes[key]=saved;else delete state.notes[key];persist();});
   emit();return saved;
  }
+ async function loadSnackFund(){
+  if(!profile)throw new Error('Vui lòng đăng nhập.');
+  if(!navigator.onLine)return state.fund;
+  const rows=await api('/rest/v1/tkb_snack_fund?select=id,day,kind,child,item,amount,created_by,created_at&order=day.desc,created_at.desc');
+  await lock(()=>{load();state.fund=rows;persist();});emit();return rows;
+ }
+ async function addSnackTransaction(day,kind,item,amount){
+  if(!profile)throw new Error('Vui lòng đăng nhập.');
+  const saved=await api('/rest/v1/rpc/tkb_add_snack_transaction',{p_id:crypto.randomUUID(),p_day:day,p_kind:kind,p_item:item.trim(),p_amount:amount});
+  await lock(()=>{load();state.fund=[saved,...state.fund.filter(row=>row.id!==saved.id)];persist();});emit();return saved;
+ }
+ async function deleteSnackTransaction(id){
+  if(!profile)throw new Error('Vui lòng đăng nhập.');
+  await api('/rest/v1/rpc/tkb_delete_snack_transaction',{p_id:id});
+  await lock(()=>{load();state.fund=state.fund.filter(row=>row.id!==id);persist();});emit();
+ }
  async function importLocal(){
   if(profile.role==='parents')return;
   const actor=profile.role,version=generation,marker=storageKey+':imported';
@@ -273,9 +290,10 @@
   }
   if(version===generation)localStorage.setItem(marker,'1');
  }
- window.TKBCloud={login,restore,logout,save,saveParentNote,sync,warmup,loadRange,loadLeaderboard,
+ window.TKBCloud={login,restore,logout,save,saveParentNote,loadSnackFund,addSnackTransaction,deleteSnackTransaction,sync,warmup,loadRange,loadLeaderboard,
   get role(){return profile?.role;},get status(){return status;},
   getRows(from,to){return profile?rowsBetween(from,to):[];},
+  getSnackFund(){return profile?state.fund:[];},
   getParentNote(day,child){return profile?state.notes[`${day}:${child}`]||null:null;},
   getCompletion(day,owner,id){if(!profile)return null;const r=viewRow(day,owner,id);return r?.completed?{completedAt:r.completed_at,completedBy:r.completed_by,note:r.note,pending:!!r.pending}:null;},
   watchDate(day){if(day===activeDay)return;activeDay=day;if(profile)pull(day).catch(failure);},

@@ -43,9 +43,9 @@
   return record;
  }
  function setView(view) {
-  if(!['today','dashboard','leaderboard','schedule','checklist'].includes(view))return;
+  if(!['today','dashboard','leaderboard','fund','schedule','checklist'].includes(view))return;
   selectedView = view;
-  for(const id of ['today','dashboard','leaderboard','schedule','checklist'])byId(id).hidden=view!==id;
+  for(const id of ['today','dashboard','leaderboard','fund','schedule','checklist'])byId(id).hidden=view!==id;
   document.querySelector('.skip').href = `#${view}`;
   document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.view===view)));
   const studentControls=document.querySelector('.students');
@@ -58,6 +58,7 @@
   if (view==='checklist') renderChecklist();
   if (view==='dashboard') window.renderDashboard?.();
   if (view==='leaderboard') window.renderLeaderboard?.();
+  if (view==='fund') window.renderSnackFund?.();
  }
  function renderChecklist() {
   const focused=document.activeElement?.matches("input[data-task]")?document.activeElement.id:null;
