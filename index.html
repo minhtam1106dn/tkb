@@ -24,6 +24,15 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <link rel="stylesheet" href="./theme-refactor.css">
 </head>
 <body>
+<svg class="icon-sprite" aria-hidden="true"><defs>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18m-13 4h3m2 0h3m-8 4h3"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7m4 7V7"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Zm0 2H4v2a4 4 0 0 0 4 4m9-6h3v2a4 4 0 0 1-4 4"/></symbol>
+<symbol id="i-pig" viewBox="0 0 24 24"><path d="M6 9c-2 1-3 3-3 5 0 4 4 7 9 7s9-3 9-7-4-7-9-7c-1 0-2 0-3 .3L7 4l-2 1 2 4Z"/><path d="M15 11h.01M3 13H1m10-9c1-2 4-2 5 0-1 2-4 3-5 0Z"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a3 3 0 0 1 3-1h5v16H7a3 3 0 0 0-3 1V5Zm16 0a3 3 0 0 0-3-1h-5v16h5a3 3 0 0 1 3 1V5Z"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 10 2 2 5-5m-7 10h8"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></symbol>
+</defs></svg>
 <a class="skip" href="#today">Đến nội dung chính</a>
 <dialog id="viewer-dialog" aria-labelledby="viewer-title" aria-describedby="viewer-description">
 <div class="viewer-mark" aria-hidden="true">TKB</div><h2 id="viewer-title">Ai đang xem hôm nay?</h2>
@@ -42,7 +51,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <header>
 <div class="topline"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h3m2 0h3"/></svg></span> Góc học tập</div>
 <div class="viewer-bar"><button id="change-viewer">Đổi người xem</button></div>
-<div class="heading"><div><h1 id="page-heading" tabindex="-1" aria-live="polite"><strong id="student-name">Nguyễn Thanh Khôi</strong></h1></div></div>
+<div class="profile"><div class="profile-visual" aria-hidden="true"><img class="profile-avatar avatar-khoi" src="./assets/characters/khoi.png" alt=""><img class="profile-avatar avatar-nhan" src="./assets/characters/nhan.png" alt=""></div><div class="heading"><span id="student-grade" class="grade-badge">Lớp 6.7</span><h1 id="page-heading" tabindex="-1" aria-live="polite"><strong id="student-name">Nguyễn Thanh Khôi</strong></h1><p id="profile-greeting">Chúc con một ngày học thật vui!</p></div></div>
 <div class="students" role="group" aria-label="Chọn bạn"><button data-student="khoi" aria-pressed="true">Thanh Khôi</button><button data-student="nhan" aria-pressed="false">Thanh Nhân</button></div>
 <nav class="view-switch" aria-label="Nội dung">
 <button data-view="today" aria-pressed="true" aria-controls="today"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18m-13 4h3m2 0h3m-8 4h3"/></svg><span>Hôm nay</span></button>
@@ -53,10 +62,10 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <button data-view="checklist" aria-pressed="false" aria-controls="checklist"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 10 2 2 4-4m-6 9h8"/></svg><span>Việc mỗi ngày</span></button>
 </nav>
 </header>
-<section id="today" aria-labelledby="today-title"><div class="today-heading"><div><h2 id="today-title">Hôm nay</h2><p id="today-date"></p></div></div><aside id="today-parent-note" class="today-parent-note" hidden><span>Lời nhắn hôm nay từ Ba Mẹ</span><p id="today-parent-note-message"></p></aside><div id="today-summary" class="today-summary"></div><div id="today-content" class="today-grid"></div></section>
+<section id="today" aria-labelledby="today-title"><div class="today-heading"><div><h2 id="today-title" class="title-with-icon"><span class="section-icon blue"><svg aria-hidden="true"><use href="#i-calendar"/></svg></span>Hôm nay</h2><p id="today-date"></p></div></div><aside id="today-parent-note" class="today-parent-note" hidden><span class="note-label"><svg aria-hidden="true"><use href="#i-star"/></svg>Lời nhắn hôm nay từ Ba Mẹ</span><p id="today-parent-note-message"></p></aside><div id="today-summary" class="today-summary"></div><div id="today-content" class="today-grid"></div><aside class="cheer-banner"><div><strong id="cheer-title">Cố lên nhé Khôi!</strong><span id="cheer-copy">Ba Mẹ luôn bên con</span></div><div class="cheer-art" aria-hidden="true"><img class="cheer-khoi" src="./assets/characters/khoi.png" alt=""><img class="cheer-nhan" src="./assets/characters/nhan.png" alt=""></div></aside></section>
 <section id="dashboard" aria-labelledby="dashboard-title" hidden>
 <div class="dashboard-toolbar">
-<div><h2 id="dashboard-title">Tổng quan việc mỗi ngày</h2><p id="dashboard-period-label"></p></div>
+<div><h2 id="dashboard-title" class="title-with-icon"><span class="section-icon green"><svg aria-hidden="true"><use href="#i-chart"/></svg></span>Tổng quan việc mỗi ngày</h2><p id="dashboard-period-label"></p></div>
 <div class="dashboard-range" role="group" aria-label="Phạm vi thống kê"><button data-dashboard-range="day" aria-pressed="true">Ngày</button><button data-dashboard-range="week" aria-pressed="false">Tuần</button><button data-dashboard-range="month" aria-pressed="false">Tháng</button></div>
 <div class="dashboard-nav"><button data-dashboard-step="-1" aria-label="Kỳ trước">←</button><button id="dashboard-current">Hiện tại</button><button data-dashboard-step="1" aria-label="Kỳ sau">→</button></div>
 </div>
@@ -66,7 +75,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 </section>
 <section id="leaderboard" aria-labelledby="leaderboard-title" hidden>
 <div class="dashboard-toolbar leaderboard-toolbar">
-<div><h2 id="leaderboard-title">Xếp hạng Khôi & Nhân</h2><p id="leaderboard-period-label"></p></div>
+<div><h2 id="leaderboard-title" class="title-with-icon"><span class="section-icon yellow"><svg aria-hidden="true"><use href="#i-trophy"/></svg></span>Xếp hạng Khôi & Nhân</h2><p id="leaderboard-period-label"></p></div>
 <div class="dashboard-range" role="group" aria-label="Phạm vi xếp hạng"><button data-leaderboard-range="day" aria-pressed="true">Ngày</button><button data-leaderboard-range="week" aria-pressed="false">Tuần</button><button data-leaderboard-range="month" aria-pressed="false">Tháng</button></div>
 <div class="dashboard-nav leaderboard-nav"><button data-leaderboard-step="-1" aria-label="Kỳ trước">←</button><button id="leaderboard-current">Hiện tại</button><button data-leaderboard-step="1" aria-label="Kỳ sau">→</button></div>
 </div>
@@ -76,12 +85,12 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <details class="score-rules"><summary>Cách tính điểm</summary><ul><li>Việc riêng: tối đa 60 điểm mỗi ngày, tính theo tỷ lệ hoàn thành.</li><li>Việc chung: 10 điểm cho mỗi mục, tính cho người hoàn thành.</li><li>Hoàn thành sớm: trước 19h +3, trước 20h +2, trước 21h +1; tối đa 15 điểm mỗi ngày.</li><li>Hoàn thành đủ việc riêng: thưởng thêm 10 điểm mỗi ngày.</li><li>“Không có bài” được tính hoàn thành nhưng không nhận điểm hoàn thành sớm.</li></ul></details>
 </section>
 <section id="schedule" aria-labelledby="schedule-title" hidden>
-<div class="panel-toolbar"><h2 id="schedule-title">Lịch học trong tuần</h2><div class="filters" role="group" aria-label="Lọc lịch học"><button data-filter="all" aria-pressed="true">Tất cả</button><button data-filter="school" aria-pressed="false">Ở trường</button><button data-filter="extra" aria-pressed="false">Học thêm</button></div></div><div class="legend panel-meta"><span><i class="dot" aria-hidden="true"></i>Ở trường</span><span><i class="dot extra" aria-hidden="true"></i>Học thêm</span></div>
+<div class="panel-toolbar"><h2 id="schedule-title" class="title-with-icon"><span class="section-icon purple"><svg aria-hidden="true"><use href="#i-book"/></svg></span>Lịch học trong tuần</h2><div class="filters" role="group" aria-label="Lọc lịch học"><button data-filter="all" aria-pressed="true">Tất cả</button><button data-filter="school" aria-pressed="false">Ở trường</button><button data-filter="extra" aria-pressed="false">Học thêm</button></div></div><div class="legend panel-meta"><span><i class="dot" aria-hidden="true"></i>Ở trường</span><span><i class="dot extra" aria-hidden="true"></i>Học thêm</span></div>
 <div id="week" class="week"></div>
 <noscript><p>Vui lòng bật JavaScript để xem thời khóa biểu.</p></noscript>
 </section>
 <section id="checklist" aria-labelledby="checklist-title" hidden>
-<div class="panel-toolbar"><h2 id="checklist-title">Việc mỗi ngày</h2>
+<div class="panel-toolbar"><h2 id="checklist-title" class="title-with-icon"><span class="section-icon green"><svg aria-hidden="true"><use href="#i-check"/></svg></span>Việc mỗi ngày</h2>
 <div class="date-controls"><button data-date-step="-1" aria-label="Ngày trước">←</button><div class="date-field"><label class="sr-only" for="checklist-date">Ngày thực hiện</label><input id="checklist-date" type="date" required></div><button data-date-step="1" aria-label="Ngày sau">→</button><button id="checklist-today">Hôm nay</button></div></div>
 <div id="checklist-progress" class="checklist-progress panel-meta"><strong id="checklist-count"></strong></div>
 <p id="checklist-error" class="checklist-alert" role="alert"></p>
@@ -94,7 +103,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 </div>
 </section>
 <section id="fund" aria-labelledby="fund-title" hidden>
-<div class="panel-toolbar"><div><h2 id="fund-title">Quỹ ăn vặt</h2></div><div class="date-controls"><button data-fund-step="-1" aria-label="Ngày trước">←</button><div class="date-field"><label class="sr-only" for="fund-date">Ngày giao dịch</label><input id="fund-date" type="date" required></div><button data-fund-step="1" aria-label="Ngày sau">→</button><button id="fund-today">Hôm nay</button></div></div>
+<div class="panel-toolbar"><div><h2 id="fund-title" class="title-with-icon"><span class="section-icon yellow"><svg aria-hidden="true"><use href="#i-pig"/></svg></span>Quỹ ăn vặt</h2></div><div class="date-controls"><button data-fund-step="-1" aria-label="Ngày trước">←</button><div class="date-field"><label class="sr-only" for="fund-date">Ngày giao dịch</label><input id="fund-date" type="date" required></div><button data-fund-step="1" aria-label="Ngày sau">→</button><button id="fund-today">Hôm nay</button></div></div>
 <div class="fund-summary"><article class="fund-balance"><span>Số dư hiện tại</span><strong id="fund-balance">0 ₫</strong></article><article><span>Tổng tiền Ba Mẹ đã cho</span><strong id="fund-income">0 ₫</strong></article><article><span>Tổng đã chi</span><strong id="fund-expense">0 ₫</strong></article></div>
 <form id="fund-form" class="fund-form"><div><label id="fund-item-label" for="fund-item">Mặt hàng đã mua</label><input id="fund-item" maxlength="100" required placeholder="Ví dụ: Bánh mì, sữa…"></div><div><label for="fund-amount">Số tiền</label><div class="money-field"><input id="fund-amount" type="number" inputmode="numeric" min="1000" max="10000000" step="1000" required placeholder="20.000"><span>₫</span></div></div><button id="fund-submit" type="submit">Thêm khoản chi</button></form>
 <p id="fund-feedback" class="fund-feedback" role="status" aria-live="polite"></p><p id="fund-error" class="checklist-alert" role="alert"></p>
@@ -132,14 +141,14 @@ function renderToday(){
  document.getElementById('today-summary').hidden=currentViewer!=='parents';
  document.getElementById('today-summary').innerHTML=visible.map(key=>{
   const student=students[key],day=student.days[weekday-1];
-  return `<article class="today-snapshot"><h3>${student.name.replace('Nguyễn ','')}</h3><p><strong>Ở trường:</strong> ${day?(day.school?.length||0)+(day.second?.length||0)+' tiết':'Không có lịch'}</p><p><strong>Học thêm:</strong> ${day?.extra?.length?day.extra.map(item=>`${item[0]}–${item[1]} ${item[2]}`).join(' · '):'Không có'}</p></article>`;
+  return `<article class="today-snapshot"><div class="snapshot-heading"><img src="./assets/characters/${key}.png" alt=""><h3>${student.name.replace('Nguyễn ','')}</h3></div><p><strong>Ở trường:</strong> ${day?(day.school?.length||0)+(day.second?.length||0)+' tiết':'Không có lịch'}</p><p><strong>Học thêm:</strong> ${day?.extra?.length?day.extra.map(item=>`${item[0]}–${item[1]} ${item[2]}`).join(' · '):'Không có'}</p></article>`;
  }).join('');
  document.getElementById('today-content').innerHTML=visible.map(key=>{
   const student=students[key],day=student.days[weekday-1];
   if(!day)return `<article class="today-card"><h3>${student.name.replace('Nguyễn ','')}</h3><p class="today-empty">Hôm nay không có lịch học.</p></article>`;
   const extras=day.extra||[];
   const school=(items,start)=>items?.length?`<ol class="today-periods">${items.map((item,i)=>item?`<li><span>Tiết ${start+i}</span><strong>${item[0]}</strong></li>`:'').join('')}</ol>`:'';
-  return `<article class="today-card"><div class="today-card-head"><div><h3>${currentViewer==='parents'?student.name.replace('Nguyễn ',''):'Lịch học hôm nay'}</h3><span>${currentViewer==='parents'?`Lớp ${student.className}`:student.name.replace('Nguyễn ','')}</span></div><span class="today-count">${extras.length} buổi học thêm</span></div><section class="today-extra"><h4>Học thêm hôm nay</h4>${extras.length?`<ul>${extras.map(item=>`<li><strong>${item[0]}–${item[1]}</strong><span>${item[2]}</span></li>`).join('')}</ul>`:'<p>Không có lịch học thêm.</p>'}</section><div class="today-school"><section><h4>Ở trường · Sáng</h4>${school(day.school,1)||'<p>Không có tiết học.</p>'}</section>${day.second?.length?`<section><h4>Ở trường · Chiều</h4>${school(day.second,day.secondStart||1)}</section>`:''}</div></article>`;
+  return `<article class="today-card"><div class="today-card-head"><div class="today-card-person"><span class="card-icon"><svg aria-hidden="true"><use href="#i-book"/></svg></span><div><h3>${currentViewer==='parents'?student.name.replace('Nguyễn ',''):'Lịch học hôm nay'}</h3><span>${currentViewer==='parents'?`Lớp ${student.className}`:student.name.replace('Nguyễn ','')}</span></div></div><span class="today-count">${extras.length} buổi học thêm</span></div><section class="today-extra"><h4>Học thêm hôm nay</h4>${extras.length?`<ul>${extras.map(item=>`<li><strong>${item[0]}–${item[1]}</strong><span>${item[2]}</span></li>`).join('')}</ul>`:'<p>Không có lịch học thêm.</p>'}</section><div class="today-school"><section><h4>Ở trường · Sáng</h4>${school(day.school,1)||'<p>Không có tiết học.</p>'}</section>${day.second?.length?`<section><h4>Ở trường · Chiều</h4>${school(day.second,day.secondStart||1)}</section>`:''}</div></article>`;
  }).join('');
 }
 window.renderToday=renderToday;
@@ -151,7 +160,13 @@ function render(){
  document.querySelector('.students').hidden=currentViewer!=='parents' || (document.getElementById('schedule').hidden && document.getElementById('checklist').hidden);
  const student = students[selectedStudent];
  const filter = selectedFilter;
+ const profileRole=familyDashboard?'parents':selectedStudent;
+ document.querySelector('header').dataset.viewer=profileRole;
  document.getElementById('student-name').textContent = familyDashboard?'Thanh Khôi & Thanh Nhân':student.name;
+ document.getElementById('student-grade').textContent = familyDashboard?'Gia đình mình':`Lớp ${student.className}`;
+ document.getElementById('profile-greeting').textContent = familyDashboard?'Cùng theo dõi một ngày thật vui của hai con!':'Chúc con một ngày học thật vui!';
+ document.getElementById('cheer-title').textContent = familyDashboard?'Cùng cố gắng nhé Khôi & Nhân!':`Cố lên nhé ${selectedStudent==='khoi'?'Khôi':'Nhân'}!`;
+ document.getElementById('cheer-copy').textContent = familyDashboard?'Mỗi ngày tiến bộ một chút':'Ba Mẹ luôn bên con';
  document.getElementById('student-footer').textContent = familyDashboard?'Thanh Khôi & Thanh Nhân':`${student.name} · Lớp ${student.className}`;
  document.title = familyDashboard?'Góc học tập · Thanh Khôi & Thanh Nhân':`Góc học tập · ${student.name}`;
  document.querySelectorAll('[data-student]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.student === selectedStudent)));
