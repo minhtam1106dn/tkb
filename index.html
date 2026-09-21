@@ -45,7 +45,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <div class="students" role="group" aria-label="Chọn bạn"><button data-student="khoi" aria-pressed="true">Thanh Khôi</button><button data-student="nhan" aria-pressed="false">Thanh Nhân</button></div>
 <nav class="view-switch" aria-label="Nội dung"><button data-view="today" aria-pressed="true" aria-controls="today">Hôm nay</button><button data-view="dashboard" aria-pressed="false" aria-controls="dashboard">Tổng quan</button><button data-view="leaderboard" aria-pressed="false" aria-controls="leaderboard">Xếp hạng</button><button data-view="schedule" aria-pressed="false" aria-controls="schedule">Thời khóa biểu</button><button data-view="checklist" aria-pressed="false" aria-controls="checklist">Việc mỗi ngày</button></nav>
 </header>
-<section id="today" aria-labelledby="today-title"><div class="today-heading"><div><h2 id="today-title">Hôm nay</h2><p id="today-date"></p></div></div><div id="today-summary" class="today-summary"></div><div id="today-content" class="today-grid"></div></section>
+<section id="today" aria-labelledby="today-title"><div class="today-heading"><div><h2 id="today-title">Hôm nay</h2><p id="today-date"></p></div></div><aside id="today-parent-note" class="today-parent-note" hidden><span>Lời nhắn hôm nay từ Ba Mẹ</span><p id="today-parent-note-message"></p></aside><div id="today-summary" class="today-summary"></div><div id="today-content" class="today-grid"></div></section>
 <section id="dashboard" aria-labelledby="dashboard-title" hidden>
 <div class="dashboard-toolbar">
 <div><h2 id="dashboard-title">Tổng quan việc mỗi ngày</h2><p id="dashboard-period-label"></p></div>
@@ -78,7 +78,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <div id="checklist-progress" class="checklist-progress panel-meta"><strong id="checklist-count"></strong></div>
 <p id="checklist-error" class="checklist-alert" role="alert"></p>
 <p id="checklist-feedback" class="sr-only" role="status" aria-live="polite"></p>
-<section id="parent-note" class="parent-note" aria-labelledby="parent-note-title"><div class="parent-note-heading"><div><span>Lời nhắn từ Ba Mẹ</span><h3 id="parent-note-title"></h3></div></div><p id="parent-note-message" class="parent-note-message"></p><form id="parent-note-form" hidden><label for="parent-note-input">Lời nhắn cho ngày đã chọn</label><textarea id="parent-note-input" maxlength="500" rows="3" placeholder="Ví dụ: Con cố gắng hoàn thành bài trước 8 giờ nhé!"></textarea><div><span id="parent-note-status" role="status" aria-live="polite"></span><button type="submit">Lưu lời nhắn</button></div></form></section>
+<section id="parent-note" class="parent-note" aria-labelledby="parent-note-title"><div class="parent-note-heading"><span>Lời nhắn từ Ba Mẹ</span><h3 id="parent-note-title"></h3></div><p id="parent-note-message" class="parent-note-message"></p><form id="parent-note-form" hidden><label class="sr-only" for="parent-note-input">Lời nhắn cho ngày đã chọn</label><input id="parent-note-input" maxlength="500" placeholder="Nhập lời nhắn rồi nhấn Enter" aria-describedby="parent-note-status"><span id="parent-note-status" role="status" aria-live="polite"></span></form></section>
 <p id="weekend-message" class="weekend-message" hidden>Thứ Bảy và Chủ nhật không có danh sách việc chung, việc riêng.</p>
 <div id="checklist-columns" class="checklist-columns">
 <section class="task-group" aria-labelledby="common-title"><h3 id="common-title">Việc chung</h3><ul id="common-tasks" class="task-list"></ul></section>
@@ -109,6 +109,11 @@ function renderToday(){
  const weekday=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',weekday:'short'}).format(now).replace(/Sun|Mon|Tue|Wed|Thu|Fri|Sat/g,d=>({Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[d])));
  document.getElementById('today-date').textContent=new Intl.DateTimeFormat('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',weekday:'long',day:'numeric',month:'numeric',year:'numeric'}).format(now);
  const visible=currentViewer==='parents'?['khoi','nhan']:[currentViewer];
+ const todayParts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now).map(part=>[part.type,part.value]));
+ const todayKey=`${todayParts.year}-${todayParts.month}-${todayParts.day}`;
+ const todayNote=currentViewer && currentViewer!=='parents'?window.TKBCloud?.getParentNote(todayKey,currentViewer):null;
+ const noteBox=document.getElementById('today-parent-note');
+ noteBox.hidden=!todayNote;document.getElementById('today-parent-note-message').textContent=todayNote?.message||'';
  document.getElementById('today-summary').innerHTML=visible.map(key=>{
   const student=students[key],day=student.days[weekday-1];
   return `<article class="today-snapshot"><h3>${student.name.replace('Nguyễn ','')}</h3><p><strong>Ở trường:</strong> ${day?(day.school?.length||0)+(day.second?.length||0)+' tiết':'Không có lịch'}</p><p><strong>Học thêm:</strong> ${day?.extra?.length?day.extra.map(item=>`${item[0]}–${item[1]} ${item[2]}`).join(' · '):'Không có'}</p></article>`;
@@ -121,6 +126,8 @@ function renderToday(){
   return `<article class="today-card"><div class="today-card-head"><div><h3>${student.name.replace('Nguyễn ','')}</h3><span>Lớp ${student.className}</span></div><span class="today-count">${extras.length} buổi học thêm</span></div><section class="today-extra"><h4>Học thêm hôm nay</h4>${extras.length?`<ul>${extras.map(item=>`<li><strong>${item[0]}–${item[1]}</strong><span>${item[2]}</span></li>`).join('')}</ul>`:'<p>Không có lịch học thêm.</p>'}</section><div class="today-school"><section><h4>Ở trường · Sáng</h4>${school(day.school,1)||'<p>Không có tiết học.</p>'}</section>${day.second?.length?`<section><h4>Ở trường · Chiều</h4>${school(day.second,day.secondStart||1)}</section>`:''}</div></article>`;
  }).join('');
 }
+window.renderToday=renderToday;
+window.TKBCloud?.subscribe(()=>{if(currentViewer)renderToday();});
 function periods(items, start=1){return '<ol class="periods">'+items.map((item,i)=>item?`<li value="${i+start}"><span class="period-number" aria-label="Tiết ${i+start}">${i+start}</span><div class="subject">${item[0]}${item[1]?`<span class="teacher">${item[1]}</span>`:''}</div></li>`:'').join('')+'</ol>';}
 function render(){
  if (currentViewer && currentViewer !== 'parents') selectedStudent=currentViewer;

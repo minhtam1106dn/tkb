@@ -122,24 +122,28 @@
  function renderParentNote(){
   const note=window.TKBCloud?.getParentNote(selectedDate,selectedStudent);
   const shortName=students[selectedStudent].name.replace('Nguyễn ','');
-  byId('parent-note-title').textContent=currentViewer==='parents'?`Gửi đến ${shortName}`:shortName;
-  byId('parent-note-message').textContent=note?.message||'Hôm nay Ba Mẹ chưa để lại lời nhắn.';
-  byId('parent-note-message').classList.toggle('empty',!note);
+  const section=byId('parent-note'),isParent=currentViewer==='parents';
+  section.hidden=!isParent&&!note;
+  byId('parent-note-title').textContent=isParent?`Gửi đến ${shortName}`:'';
+  const message=byId('parent-note-message');message.hidden=isParent;message.textContent=note?.message||'';
   const form=byId('parent-note-form');form.hidden=currentViewer!=='parents';
   const input=byId('parent-note-input');
-  if(document.activeElement!==input)input.value=note?.message||'';
+  if(document.activeElement!==input){input.value=note?.message||'';input.dataset.saved=input.value;}
  }
  byId('parent-note-form').addEventListener('submit',async event=>{
   event.preventDefault();
   if(currentViewer!=='parents')return;
-  const input=byId('parent-note-input'),button=event.currentTarget.querySelector('button'),status=byId('parent-note-status');
-  button.disabled=true;button.textContent='Đang lưu…';status.textContent='';
+  const input=byId('parent-note-input'),status=byId('parent-note-status');
+  if(input.dataset.saving==='true' || input.value===input.dataset.saved)return;
+  input.dataset.saving='true';input.disabled=true;status.textContent='Đang lưu…';
   try{
    await window.TKBCloud.saveParentNote(selectedDate,selectedStudent,input.value);
-   status.textContent=input.value.trim()?'Đã lưu lời nhắn.':'Đã xóa lời nhắn.';
+   input.dataset.saved=input.value.trim();input.value=input.dataset.saved;
+   status.textContent=input.value?'Đã lưu':'Đã xóa';
   }catch(error){status.textContent=error.message||'Chưa lưu được lời nhắn.';}
-  finally{button.disabled=false;button.textContent='Lưu lời nhắn';renderParentNote();}
+  finally{delete input.dataset.saving;input.disabled=false;renderParentNote();}
  });
+ byId('parent-note-input').addEventListener('blur',event=>{if(event.target.value!==event.target.dataset.saved)event.target.form.requestSubmit();});
  function rollDate() {
   const next=today();
   if (next===lastToday) return false;
@@ -229,5 +233,6 @@
  } catch (_) {
   byId('checklist-error').textContent='Chưa chuyển được một số lịch sử việc riêng. Dữ liệu cũ vẫn được giữ; hãy kiểm tra quyền lưu dữ liệu rồi tải lại.';
  }
+ window.TKBCloud?.watchDate(selectedDate);
  setView(selectedView);
 })();
