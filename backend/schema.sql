@@ -244,7 +244,7 @@ begin
    count(t.task_id) filter(where t.owner=c.student)::bigint as private_done,
    count(t.task_id) filter(where t.owner='shared')::bigint as shared_done,
    least(15,coalesce(sum(case when t.note is null then case
-    when (t.completed_at at time zone 'Asia/Ho_Chi_Minh')::time<time '18:00' then 3
+    when (t.completed_at at time zone 'Asia/Ho_Chi_Minh')::time<time '19:00' then 3
     when (t.completed_at at time zone 'Asia/Ho_Chi_Minh')::time<time '20:00' then 2
     when (t.completed_at at time zone 'Asia/Ho_Chi_Minh')::time<time '21:00' then 1
     else 0 end else 0 end),0))::bigint as early_bonus
