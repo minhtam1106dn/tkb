@@ -129,8 +129,9 @@
   const message=byId('parent-note-message');message.hidden=isParent;message.textContent=note?.message||'';
   const form=byId('parent-note-form');form.hidden=currentViewer!=='parents';
   const input=byId('parent-note-input');
-  if(document.activeElement!==input){input.value=note?.message||'';input.dataset.saved=input.value;}
+  if(document.activeElement!==input){input.value=note?.message||'';input.dataset.saved=input.value;fitParentNote(input);}
  }
+ function fitParentNote(input){input.style.height='auto';input.style.height=`${Math.max(92,input.scrollHeight)}px`;}
  byId('parent-note-form').addEventListener('submit',async event=>{
   event.preventDefault();
   if(currentViewer!=='parents')return;
@@ -145,6 +146,8 @@
   finally{delete input.dataset.saving;input.disabled=false;renderParentNote();}
  });
  byId('parent-note-input').addEventListener('blur',event=>{if(event.target.value!==event.target.dataset.saved)event.target.form.requestSubmit();});
+ byId('parent-note-input').addEventListener('input',event=>fitParentNote(event.target));
+ byId('parent-note-input').addEventListener('keydown',event=>{if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();event.target.form.requestSubmit();}});
  function rollDate() {
   const next=today();
   if (next===lastToday) return false;

@@ -66,7 +66,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 </section>
 <section id="leaderboard" aria-labelledby="leaderboard-title" hidden>
 <div class="dashboard-toolbar leaderboard-toolbar">
-<div><h2 id="leaderboard-title">Xếp hạng Thanh Khôi & Thanh Nhân</h2><p id="leaderboard-period-label"></p></div>
+<div><h2 id="leaderboard-title">Xếp hạng Khôi & Nhân</h2><p id="leaderboard-period-label"></p></div>
 <div class="dashboard-range" role="group" aria-label="Phạm vi xếp hạng"><button data-leaderboard-range="day" aria-pressed="true">Ngày</button><button data-leaderboard-range="week" aria-pressed="false">Tuần</button><button data-leaderboard-range="month" aria-pressed="false">Tháng</button></div>
 <div class="dashboard-nav leaderboard-nav"><button data-leaderboard-step="-1" aria-label="Kỳ trước">←</button><button id="leaderboard-current">Hiện tại</button><button data-leaderboard-step="1" aria-label="Kỳ sau">→</button></div>
 </div>
@@ -86,7 +86,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <div id="checklist-progress" class="checklist-progress panel-meta"><strong id="checklist-count"></strong></div>
 <p id="checklist-error" class="checklist-alert" role="alert"></p>
 <p id="checklist-feedback" class="sr-only" role="status" aria-live="polite"></p>
-<section id="parent-note" class="parent-note" aria-labelledby="parent-note-title"><div class="parent-note-heading"><span>Lời nhắn từ Ba Mẹ</span><h3 id="parent-note-title"></h3></div><p id="parent-note-message" class="parent-note-message"></p><form id="parent-note-form" hidden><label class="sr-only" for="parent-note-input">Lời nhắn cho ngày đã chọn</label><input id="parent-note-input" maxlength="500" placeholder="Nhập lời nhắn rồi nhấn Enter" aria-describedby="parent-note-status"><span id="parent-note-status" role="status" aria-live="polite"></span></form></section>
+<section id="parent-note" class="parent-note" aria-labelledby="parent-note-title"><div class="parent-note-heading"><span>Lời nhắn từ Ba Mẹ</span><h3 id="parent-note-title"></h3></div><p id="parent-note-message" class="parent-note-message"></p><form id="parent-note-form" hidden><label class="sr-only" for="parent-note-input">Lời nhắn cho ngày đã chọn</label><textarea id="parent-note-input" maxlength="500" rows="3" placeholder="Nhập lời nhắn; hệ thống tự lưu khi rời ô" aria-describedby="parent-note-status"></textarea><span id="parent-note-status" role="status" aria-live="polite"></span></form></section>
 <p id="weekend-message" class="weekend-message" hidden>Thứ Bảy và Chủ nhật không có danh sách việc chung, việc riêng.</p>
 <div id="checklist-columns" class="checklist-columns">
 <section class="task-group" aria-labelledby="common-title"><h3 id="common-title">Việc chung</h3><ul id="common-tasks" class="task-list"></ul></section>

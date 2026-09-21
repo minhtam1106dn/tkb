@@ -1,6 +1,6 @@
 // Increase this version when changing the offline shell or cache strategy.
 const CACHE_PREFIX = 'tkb-' + new URL(self.registration.scope).pathname + '-';
-const CACHE_NAME = CACHE_PREFIX + 'v24';
+const CACHE_NAME = CACHE_PREFIX + 'v25';
 const APP_URL = new URL('./', self.registration.scope).href;
 const ASSETS = [
   './', './index.html', './checklist.js', './dashboard.js', './leaderboard.js', './snack-fund.js', './auth-sync.js', './cloud-config.js', './checklist.css', './theme-refactor.css', './images.jpeg', './manifest.webmanifest',
