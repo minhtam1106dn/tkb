@@ -16,7 +16,7 @@
  const parse=value=>new Date(value+'T12:00:00Z');
  const key=date=>date.toISOString().slice(0,10);
  function move(value,days){const date=parse(value);date.setUTCDate(date.getUTCDate()+days);return key(date);}
- function dates(from,to){const result=[];for(let value=from;value<=to;value=move(value,1))result.push(value);return result;}
+ function dates(from,to){const result=[];for(let value=from;value<=to;value=move(value,1)){const day=parse(value).getUTCDay();if(day!==0&&day!==6)result.push(value);}return result;}
  function range(){
   const date=parse(anchor);
   if(rangeMode==='day')return {from:anchor,to:anchor,periodEnd:anchor};
@@ -81,6 +81,7 @@
  }
  const meter=(label,done,total)=>`<div class="dashboard-meter"><div><span>${label}</span><strong>${done}/${total}</strong></div><div class="meter-track" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}"><span style="width:${total?done/total*100:0}%"></span></div></div>`;
  function insight(data,role){
+  if(!data.total)return {title:'Cuối tuần nghỉ ngơi',text:'Thứ Bảy và Chủ nhật không có danh sách việc chung, việc riêng.'};
   if(data.done===data.total)return {title:'Hoàn thành rất tốt',text:`Đã hoàn thành toàn bộ ${data.total} việc trong kỳ này.`};
   if(!data.attention.length)return {title:'Chưa có dữ liệu',text:'Hãy hoàn thành checklist để bắt đầu theo dõi tiến độ.'};
   const first=data.attention[0].task;

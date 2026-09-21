@@ -53,6 +53,40 @@ create policy tkb_read_tasks on public.tkb_tasks for select to authenticated
  using (tkb_private.viewer_role() is not null and
   (owner = 'shared' or owner = tkb_private.viewer_role() or tkb_private.viewer_role() = 'parents'));
 
+create table if not exists public.tkb_parent_notes (
+ day date not null,
+ child text not null check (child in ('khoi','nhan')),
+ message text not null check (length(message) between 1 and 500),
+ updated_at timestamptz not null default now(),
+ primary key(day,child)
+);
+alter table public.tkb_parent_notes enable row level security;
+revoke all on public.tkb_parent_notes from anon,authenticated;
+grant select on public.tkb_parent_notes to authenticated;
+drop policy if exists tkb_read_parent_notes on public.tkb_parent_notes;
+create policy tkb_read_parent_notes on public.tkb_parent_notes for select to authenticated
+ using (tkb_private.viewer_role()='parents' or child=tkb_private.viewer_role());
+
+create or replace function public.tkb_set_parent_note(p_day date,p_child text,p_message text)
+returns public.tkb_parent_notes
+language plpgsql security definer set search_path='' as $$
+declare saved public.tkb_parent_notes%rowtype;
+begin
+ if tkb_private.viewer_role()<>'parents' then raise exception 'Not allowed' using errcode='42501'; end if;
+ if p_day is null or p_child not in ('khoi','nhan') or p_message is null
+   or length(btrim(p_message))>500 then raise exception 'Invalid note'; end if;
+ if btrim(p_message)='' then
+  delete from public.tkb_parent_notes where day=p_day and child=p_child returning * into saved;
+  return saved;
+ end if;
+ insert into public.tkb_parent_notes(day,child,message) values(p_day,p_child,btrim(p_message))
+ on conflict(day,child) do update set message=excluded.message,updated_at=now()
+ returning * into saved;
+ return saved;
+end $$;
+revoke all on function public.tkb_set_parent_note(date,text,text) from public,anon;
+grant execute on function public.tkb_set_parent_note(date,text,text) to authenticated;
+
 create table if not exists tkb_private.operations (
  user_id uuid not null references auth.users(id) on delete cascade,
  operation_id uuid not null,
@@ -149,7 +183,7 @@ begin
    or p_to-p_from>62 then raise exception 'Invalid leaderboard range'; end if;
  return query
  with children(student,expected) as (values ('khoi'::text,6),('nhan'::text,5)),
- days(day) as (select generate_series(p_from,p_to,interval '1 day')::date),
+ days(day) as (select value::date from generate_series(p_from,p_to,interval '1 day') value where extract(isodow from value)<6),
  daily as (
   select c.student,d.day,c.expected,
    count(t.task_id) filter(where t.owner=c.student)::bigint as private_done,
@@ -200,4 +234,4 @@ revoke all on function public.tkb_login_attempt(text) from public,anon,authentic
 grant execute on function public.tkb_login_attempt(text) to service_role;
 
 -- Automatic grants are disabled for this project; grant administration explicitly.
-grant all on public.tkb_profiles,public.tkb_timetables,public.tkb_tasks to service_role;
+grant all on public.tkb_profiles,public.tkb_timetables,public.tkb_tasks,public.tkb_parent_notes to service_role;

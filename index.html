@@ -78,7 +78,9 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <div id="checklist-progress" class="checklist-progress panel-meta"><strong id="checklist-count"></strong></div>
 <p id="checklist-error" class="checklist-alert" role="alert"></p>
 <p id="checklist-feedback" class="sr-only" role="status" aria-live="polite"></p>
-<div class="checklist-columns">
+<section id="parent-note" class="parent-note" aria-labelledby="parent-note-title"><div class="parent-note-heading"><div><span>Lời nhắn từ Ba Mẹ</span><h3 id="parent-note-title"></h3></div></div><p id="parent-note-message" class="parent-note-message"></p><form id="parent-note-form" hidden><label for="parent-note-input">Lời nhắn cho ngày đã chọn</label><textarea id="parent-note-input" maxlength="500" rows="3" placeholder="Ví dụ: Con cố gắng hoàn thành bài trước 8 giờ nhé!"></textarea><div><span id="parent-note-status" role="status" aria-live="polite"></span><button type="submit">Lưu lời nhắn</button></div></form></section>
+<p id="weekend-message" class="weekend-message" hidden>Thứ Bảy và Chủ nhật không có danh sách việc chung, việc riêng.</p>
+<div id="checklist-columns" class="checklist-columns">
 <section class="task-group" aria-labelledby="common-title"><h3 id="common-title">Việc chung</h3><ul id="common-tasks" class="task-list"></ul></section>
 <section class="task-group" aria-labelledby="private-title"><h3 id="private-title">Việc riêng</h3><ul id="private-tasks" class="task-list"></ul></section>
 </div>

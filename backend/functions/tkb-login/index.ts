@@ -47,16 +47,18 @@ Deno.serve(async request => {
   const session=await result.json();
   const userHeaders={apikey:anonKey,Authorization:`Bearer ${session.access_token}`};
   const taskRequest=day?fetch(`${projectUrl}/rest/v1/tkb_tasks?day=eq.${encodeURIComponent(day)}&select=*`,{headers:userHeaders}):Promise.resolve(null);
-  const [profileResult,scheduleResult,taskResult]=await Promise.all([
+  const noteRequest=day?fetch(`${projectUrl}/rest/v1/tkb_parent_notes?day=eq.${encodeURIComponent(day)}&select=day,child,message,updated_at`,{headers:userHeaders}):Promise.resolve(null);
+  const [profileResult,scheduleResult,taskResult,noteResult]=await Promise.all([
    fetch(`${projectUrl}/rest/v1/tkb_profiles?select=role`,{headers:userHeaders}),
    fetch(`${projectUrl}/rest/v1/tkb_timetables?select=student,days`,{headers:userHeaders}),
    taskRequest,
+   noteRequest,
   ]);
   if(!profileResult.ok)return new Response(JSON.stringify({error:'Dịch vụ chưa sẵn sàng.'}),{status:503,headers:cors});
   const profiles=await profileResult.json();
   if(profiles.length!==1 || profiles[0].role!==role)return new Response(JSON.stringify({error:'Tài khoản chưa được cấu hình đúng quyền.'}),{status:403,headers:cors});
-  const bootstrap=scheduleResult.ok && (!taskResult || taskResult.ok)?{
-   role,day:day||null,schedules:await scheduleResult.json(),tasks:taskResult?await taskResult.json():[]
+  const bootstrap=scheduleResult.ok && (!taskResult || taskResult.ok) && (!noteResult || noteResult.ok)?{
+   role,day:day||null,schedules:await scheduleResult.json(),tasks:taskResult?await taskResult.json():[],notes:noteResult?await noteResult.json():[]
   }:null;
   return new Response(JSON.stringify({...session,bootstrap}),{status:200,headers:cors});
  } catch (_) {

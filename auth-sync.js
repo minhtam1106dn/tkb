@@ -6,7 +6,7 @@
  let state={days:{},queue:[]},storageKey='',refreshing=null,flushing=null,pulling=null;
  const listeners=new Set();
  const emit=()=>listeners.forEach(fn=>fn());
- const empty=()=>({days:{},queue:[],leaderboards:{}});
+ const empty=()=>({days:{},queue:[],leaderboards:{},notes:{}});
  function savedSession(){
   try{
    const saved=JSON.parse(localStorage.getItem(sessionKey));
@@ -23,6 +23,7 @@
   const next=raw?JSON.parse(raw):empty();
   if(!next || !next.days || !Array.isArray(next.queue))throw new Error('Không đọc được dữ liệu trên thiết bị.');
   if(!next.leaderboards || typeof next.leaderboards!=='object')next.leaderboards={};
+  if(!next.notes || typeof next.notes!=='object')next.notes={};
   state=next;
  }
  function persist(){localStorage.setItem(storageKey,JSON.stringify(state));}
@@ -92,10 +93,16 @@
  async function pull(day=activeDay){
   if(!profile || !day || !navigator.onLine)return;
   const version=generation;
-  const rows=await api(`/rest/v1/tkb_tasks?day=eq.${encodeURIComponent(day)}&select=*`);
+  const [rows,notes]=await Promise.all([
+   api(`/rest/v1/tkb_tasks?day=eq.${encodeURIComponent(day)}&select=*`),
+   api(`/rest/v1/tkb_parent_notes?day=eq.${encodeURIComponent(day)}&select=day,child,message,updated_at`)
+  ]);
   await lock(()=>{
    if(version!==generation)return;
-   load();for(const row of rows)cacheRow(row);persist();
+   load();for(const row of rows)cacheRow(row);
+   for(const child of ['khoi','nhan'])delete state.notes[`${day}:${child}`];
+   for(const note of notes)state.notes[`${note.day}:${note.child}`]=note;
+   persist();
    status=state.queue.length?'Đang chờ đồng bộ':'Đã đồng bộ';
   });
   if(version===generation)emit();
@@ -169,19 +176,21 @@
    profile={role,id:next.user.id};
    storageKey=`tkb-cloud:v1:${new URL(config.url).hostname}:${profile.id}`;
    load();
-   let schedules,rows;
+   let schedules,rows,notes=[];
    if(bootstrap){
     schedules=bootstrap.schedules;rows=bootstrap.tasks;
+    notes=bootstrap.notes||[];
    }else{
-    const [profiles,loadedSchedules,loadedRows]=await Promise.all([
+    const [profiles,loadedSchedules,loadedRows,loadedNotes]=await Promise.all([
      api('/rest/v1/tkb_profiles?select=role'),
      api('/rest/v1/tkb_timetables?select=student,days'),
      requestedDay?api(`/rest/v1/tkb_tasks?day=eq.${encodeURIComponent(requestedDay)}&select=*`):Promise.resolve([]),
+     requestedDay?api(`/rest/v1/tkb_parent_notes?day=eq.${encodeURIComponent(requestedDay)}&select=day,child,message,updated_at`):Promise.resolve([]),
     ]);
     if(profiles.length!==1 || profiles[0].role!==role)throw new Error('Tài khoản chưa được cấu hình đúng quyền.');
-    schedules=loadedSchedules;rows=loadedRows;
+    schedules=loadedSchedules;rows=loadedRows;notes=loadedNotes;
    }
-   if(rows.length)await lock(()=>{load();for(const row of rows)cacheRow(row);persist();});
+   if(rows.length || notes.length)await lock(()=>{load();for(const row of rows)cacheRow(row);for(const note of notes)state.notes[`${note.day}:${note.child}`]=note;persist();});
    status=state.queue.length?'Đang đồng bộ':'Đã đồng bộ';
    persistSession();
    clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)sync();},5000);
@@ -240,6 +249,14 @@
   });
   if(version===generation)void flush();
  }
+ async function saveParentNote(day,child,message){
+  if(profile?.role!=='parents' || !['khoi','nhan'].includes(child))throw new Error('Chỉ Ba Mẹ được lưu lời nhắn.');
+  const clean=message.trim();
+  if(clean.length>500)throw new Error('Lời nhắn tối đa 500 ký tự.');
+  const saved=await api('/rest/v1/rpc/tkb_set_parent_note',{p_day:day,p_child:child,p_message:clean});
+  await lock(()=>{load();const key=`${day}:${child}`;if(clean)state.notes[key]=saved;else delete state.notes[key];persist();});
+  emit();return saved;
+ }
  async function importLocal(){
   if(profile.role==='parents')return;
   const actor=profile.role,version=generation,marker=storageKey+':imported';
@@ -256,9 +273,10 @@
   }
   if(version===generation)localStorage.setItem(marker,'1');
  }
- window.TKBCloud={login,restore,logout,save,sync,warmup,loadRange,loadLeaderboard,
+ window.TKBCloud={login,restore,logout,save,saveParentNote,sync,warmup,loadRange,loadLeaderboard,
   get role(){return profile?.role;},get status(){return status;},
   getRows(from,to){return profile?rowsBetween(from,to):[];},
+  getParentNote(day,child){return profile?state.notes[`${day}:${child}`]||null:null;},
   getCompletion(day,owner,id){if(!profile)return null;const r=viewRow(day,owner,id);return r?.completed?{completedAt:r.completed_at,completedBy:r.completed_by,note:r.note,pending:!!r.pending}:null;},
   watchDate(day){if(day===activeDay)return;activeDay=day;if(profile)pull(day).catch(failure);},
   subscribe(fn){listeners.add(fn);return ()=>listeners.delete(fn);}

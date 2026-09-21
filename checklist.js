@@ -64,8 +64,17 @@
   window.TKBCloud?.watchDate(selectedDate);
   const student = students[selectedStudent];
   const editable = selectedDate===today() && currentViewer===selectedStudent;
+  const weekend=[0,6].includes(new Date(selectedDate+'T12:00:00Z').getUTCDay());
   byId('checklist-date').value = selectedDate;
   byId('private-title').textContent = `Việc riêng · ${student.name.replace('Nguyễn ','')}`;
+  renderParentNote();
+  byId('checklist-columns').hidden=weekend;
+  byId('weekend-message').hidden=!weekend;
+  byId('checklist-progress').hidden=weekend;
+  if(weekend){
+   byId('common-tasks').replaceChildren();byId('private-tasks').replaceChildren();
+   byId('checklist-count').textContent='';return;
+  }
   const total=taskGroups().reduce((sum,[,,tasks])=>sum+tasks.length,0);
   let completed=0, storageFailed=false;
   for (const [listId,owner,tasks] of taskGroups()) {
@@ -110,6 +119,27 @@
    byId('checklist-count').textContent='Chưa đọc đủ dữ liệu';
   }
  }
+ function renderParentNote(){
+  const note=window.TKBCloud?.getParentNote(selectedDate,selectedStudent);
+  const shortName=students[selectedStudent].name.replace('Nguyễn ','');
+  byId('parent-note-title').textContent=currentViewer==='parents'?`Gửi đến ${shortName}`:shortName;
+  byId('parent-note-message').textContent=note?.message||'Hôm nay Ba Mẹ chưa để lại lời nhắn.';
+  byId('parent-note-message').classList.toggle('empty',!note);
+  const form=byId('parent-note-form');form.hidden=currentViewer!=='parents';
+  const input=byId('parent-note-input');
+  if(document.activeElement!==input)input.value=note?.message||'';
+ }
+ byId('parent-note-form').addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(currentViewer!=='parents')return;
+  const input=byId('parent-note-input'),button=event.currentTarget.querySelector('button'),status=byId('parent-note-status');
+  button.disabled=true;button.textContent='Đang lưu…';status.textContent='';
+  try{
+   await window.TKBCloud.saveParentNote(selectedDate,selectedStudent,input.value);
+   status.textContent=input.value.trim()?'Đã lưu lời nhắn.':'Đã xóa lời nhắn.';
+  }catch(error){status.textContent=error.message||'Chưa lưu được lời nhắn.';}
+  finally{button.disabled=false;button.textContent='Lưu lời nhắn';renderParentNote();}
+ });
  function rollDate() {
   const next=today();
   if (next===lastToday) return false;

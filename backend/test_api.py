@@ -23,6 +23,7 @@ for role in ['khoi','nhan','parents']:
  assert data['bootstrap']['role']==role and data['bootstrap']['day']==day
  assert {x['student'] for x in data['bootstrap']['schedules']}==expected
  assert isinstance(data['bootstrap']['tasks'],list)
+ assert isinstance(data['bootstrap']['notes'],list)
  sessions[role]=data['access_token']
  code,rows=request('/rest/v1/tkb_timetables?select=student',token=sessions[role]);assert code==200 and {x['student'] for x in rows}==expected
 assert request('/functions/v1/tkb-login',{'role':'khoi','password':'wrong-test-password'})[0]==401
@@ -32,6 +33,16 @@ assert request('/rest/v1/rpc/tkb_login_attempt',{'p_bucket':'a'*64},sessions['kh
 assert rpc(sessions['parents'],'shared','fish',True,0)[0]==403
 assert rpc(sessions['khoi'],'nhan','bath',True,0)[0]==403
 assert request('/rest/v1/tkb_profiles',{'user_id':str(uuid.uuid4()),'role':'parents'},sessions['khoi'])[0]==403
+note_path='/rest/v1/tkb_parent_notes?day=eq.'+day+'&child=eq.khoi'
+assert request(note_path,token=c['service_role'])[1]==[], 'Parent note exists; will not overwrite household data'
+try:
+ code,note=request('/rest/v1/rpc/tkb_set_parent_note',{'p_day':day,'p_child':'khoi','p_message':'Lời nhắn kiểm thử'},sessions['parents'])
+ assert code==200 and note['message']=='Lời nhắn kiểm thử'
+ assert request(note_path,token=sessions['khoi'])[1][0]['message']=='Lời nhắn kiểm thử'
+ assert request(note_path,token=sessions['nhan'])[1]==[]
+ assert request('/rest/v1/rpc/tkb_set_parent_note',{'p_day':day,'p_child':'khoi','p_message':'Không được phép'},sessions['khoi'])[0]==403
+finally:
+ request(note_path,token=c['service_role'],method='DELETE')
 # Test one previously absent shared task; delete only the test record after verification.
 path='/rest/v1/tkb_tasks?day=eq.'+day+'&owner=eq.shared&task_id=eq.fish'
 assert request(path,token=c['service_role'])[1]==[], 'Task exists; will not overwrite household data'
@@ -51,4 +62,4 @@ try:
 finally:
  rows=request(path,token=c['service_role'])[1]
  if rows and rows[0]['revision']<=3:assert request(path+'&revision=eq.'+str(rows[0]['revision']),token=c['service_role'],method='DELETE')[0]==204
-print('PASS: one-response login bootstrap; all three passwords; wrong password; signup disabled; anonymous denied; per-child schedules; parents read-only; no role escalation; race, owner-only undo, idempotency, stale conflict and three-session visibility. Login seconds:',{role:round(value,3) for role,value in login_times.items()})
+print('PASS: one-response login bootstrap; all three passwords; wrong password; signup disabled; anonymous denied; per-child schedules; parents read-only; no role escalation; parent-note permissions; race, owner-only undo, idempotency, stale conflict and three-session visibility. Login seconds:',{role:round(value,3) for role,value in login_times.items()})
