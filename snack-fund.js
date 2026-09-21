@@ -45,14 +45,14 @@
    list.append(li);
   }
  }
- async function load(force=false){
+ async function load(force=false,quiet=false){
   if(loading || (!force&&Date.now()-loadedAt<30000))return;
-  loading=true;byId('fund-feedback').textContent='Đang cập nhật quỹ…';
-  try{await window.TKBCloud.loadSnackFund();loadedAt=Date.now();byId('fund-feedback').textContent='';}
+  loading=true;if(!quiet)byId('fund-feedback').textContent='Đang cập nhật quỹ…';
+  try{await window.TKBCloud.loadSnackFund();loadedAt=Date.now();if(!quiet)byId('fund-feedback').textContent='';}
   catch(error){byId('fund-error').textContent=error.message||'Chưa tải được quỹ ăn vặt.';}
   finally{loading=false;render();}
  }
- function open(){render();void load();}
+ function open(){render();void load(true);}
  byId('fund-form').addEventListener('submit',async event=>{
   event.preventDefault();const item=byId('fund-item'),amount=byId('fund-amount'),button=byId('fund-submit');
   const value=Number(amount.value);byId('fund-error').textContent='';byId('fund-feedback').textContent='';
@@ -75,4 +75,7 @@
  byId('fund-today').addEventListener('click',()=>{selectedDate=dateKey();render();});
  window.renderSnackFund=open;
  window.TKBCloud?.subscribe(()=>{if(!byId('fund').hidden)render();});
+ setInterval(()=>{if(!document.hidden&&!byId('fund').hidden)void load(true,true);},5000);
+ window.addEventListener('focus',()=>{if(!byId('fund').hidden)void load(true,true);});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!byId('fund').hidden)void load(true,true);});
 })();
