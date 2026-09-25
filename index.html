@@ -45,6 +45,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <p id="login-error" class="checklist-alert" role="alert"></p>
 <button id="login-submit" type="submit">Đăng nhập</button>
 </form>
+<button id="viewer-cancel" type="button" hidden>Hủy</button>
 </dialog>
 <p id="session-loading" role="status" style="margin:20vh auto 0;padding:24px;text-align:center;color:#53627a">Đang mở lịch học…</p>
 <main id="app" class="wrap" hidden>
@@ -96,6 +97,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <p id="checklist-feedback" class="sr-only" role="status" aria-live="polite"></p>
 <section id="parent-note" class="parent-note" aria-labelledby="parent-note-title"><div class="parent-note-heading"><span>Lời nhắn từ Ba Mẹ</span><h3 id="parent-note-title"></h3></div><p id="parent-note-message" class="parent-note-message"></p><form id="parent-note-form" hidden><label class="sr-only" for="parent-note-input">Lời nhắn cho ngày đã chọn</label><textarea id="parent-note-input" maxlength="500" rows="3" placeholder="Nhập lời nhắn; hệ thống tự lưu khi rời ô" aria-describedby="parent-note-status"></textarea><span id="parent-note-status" role="status" aria-live="polite"></span></form></section>
 <p id="weekend-message" class="weekend-message" hidden>Thứ Bảy và Chủ nhật không có danh sách việc chung, việc riêng.</p>
+<div id="task-management" hidden><button id="manage-tasks" type="button">Quản lý công việc</button></div>
 <div id="checklist-columns" class="checklist-columns">
 <section class="task-group" aria-labelledby="common-title"><h3 id="common-title">Việc chung</h3><ul id="common-tasks" class="task-list"></ul></section>
 <section class="task-group" aria-labelledby="private-title"><h3 id="private-title">Việc riêng</h3><ul id="private-tasks" class="task-list"></ul></section>
@@ -189,21 +191,26 @@ const passwordInput=document.getElementById('login-password');
 let loginRole=null,loginBusy=false;
 function openViewerDialog(){
  if(loginBusy)return;
- currentViewer=null;window.TKBCloud?.logout();
  showViewerDialog();
 }
 function showViewerDialog(){
  document.getElementById('session-loading').hidden=true;
+ if(!currentViewer){
  students.khoi.days=[];students.nhan.days=[];
  document.getElementById('app').hidden=true;
  document.getElementById('week').replaceChildren();
  document.title='Thời khóa biểu gia đình';
+ }
+ document.getElementById('viewer-cancel').hidden=!currentViewer;
  loginRole=null;loginForm.hidden=true;passwordInput.value='';
  document.getElementById('login-error').textContent='';
  document.querySelectorAll('[data-viewer]').forEach(b=>b.setAttribute('aria-pressed','false'));
  if(!viewerDialog.open)viewerDialog.showModal();
 }
-viewerDialog.addEventListener('cancel',event=>event.preventDefault());
+function cancelViewer(){if(loginBusy || !currentViewer)return;passwordInput.value='';viewerDialog.close();document.getElementById('change-viewer').focus();}
+viewerDialog.addEventListener('cancel',event=>{event.preventDefault();cancelViewer();});
+document.getElementById('viewer-cancel').addEventListener('click',cancelViewer);
+window.addEventListener('tkb-signed-out',()=>{currentViewer=null;showViewerDialog();});
 viewerDialog.addEventListener('keydown',event=>{
  if(event.key==='Tab'){
   const controls=[...viewerDialog.querySelectorAll('button,input')].filter(e=>!e.disabled && e.tabIndex>=0 && e.getClientRects().length && !e.closest('[hidden]'));
@@ -269,6 +276,7 @@ if ('serviceWorker'  in navigator) {
 }
 </script>
 <script src="./checklist.js"></script>
+<script src="./task-manager.js"></script>
 <script src="./dashboard.js"></script>
 <script src="./leaderboard.js"></script>
 <script src="./snack-fund.js"></script>

@@ -34,18 +34,18 @@
   if(rangeMode==='month')return monthFormat.format(parse(from));
   return `Tuần ${shortDateFormat.format(parse(from))} – ${shortDateFormat.format(parse(periodEnd))}`;
  }
- function privateTasks(owner){return window.TKB_TASKS.private.filter(([id])=>owner!=='nhan'||id!=='extra-homework');}
- function catalog(role){
-  const common=window.TKB_TASKS.common.map(([id,name])=>({owner:'shared',id,name,group:'Việc chung'}));
+ function catalog(role,day){
+  const common=window.TKB_TASKS.forDay('shared',day).map(([id,name])=>({owner:'shared',id,name,group:'Việc chung'}));
   const owners=role==='parents'?['khoi','nhan']:[role];
-  return common.concat(owners.flatMap(owner=>privateTasks(owner).map(([id,name])=>({owner,id,name,group:`Việc riêng ${owner==='khoi'?'Khôi':'Nhân'}`}))));
+  return common.concat(owners.flatMap(owner=>window.TKB_TASKS.forDay(owner,day).map(([id,name])=>({owner,id,name,group:`Việc riêng ${owner==='khoi'?'Khôi':'Nhân'}`}))));
  }
  function analyze(rows,period,role){
-  const allDates=dates(period.from,period.to),tasks=catalog(role);
+  const allDates=dates(period.from,period.to);
   const rowMap=new Map(rows.map(row=>[`${row.day}:${row.owner}:${row.task_id}`,row]));
   const missed=new Map(),breakdown=new Map(),dayStats=[];
   let done=0,noHomework=0,perfectDays=0;
   for(const day of allDates){
+   const tasks=catalog(role,day);
    let dayDone=0;
    for(const task of tasks){
     const row=rowMap.get(`${day}:${task.owner}:${task.id}`),complete=!!row?.completed;
@@ -55,17 +55,17 @@
     breakdown.set(task.group,group);
    }
    const total=tasks.length,pct=total?Math.round(dayDone/total*100):0;
-   if(dayDone===total)perfectDays++;
+   if(total && dayDone===total)perfectDays++;
    dayStats.push({day,done:dayDone,total,pct});
   }
   let streak=0,index=dayStats.length-1;
   if(dayStats[index]?.day===today()&&dayStats[index].done<dayStats[index].total)index--;
-  for(;index>=0&&dayStats[index].done===dayStats[index].total;index--)streak++;
-  const expected=new Set(tasks.map(task=>`${task.owner}:${task.id}`));
-  const completedRows=rows.filter(row=>row.completed&&expected.has(`${row.owner}:${row.task_id}`));
+  for(;index>=0&&dayStats[index].total>0&&dayStats[index].done===dayStats[index].total;index--)streak++;
+  const expected=new Set(allDates.flatMap(day=>catalog(role,day).map(task=>`${day}:${task.owner}:${task.id}`)));
+  const completedRows=rows.filter(row=>row.completed&&expected.has(`${row.day}:${row.owner}:${row.task_id}`));
   const contribution={khoi:0,nhan:0};
   for(const row of completedRows)if(row.owner==='shared'&&Object.hasOwn(contribution,row.completed_by))contribution[row.completed_by]++;
-  const total=allDates.length*tasks.length,pct=total?Math.round(done/total*100):0;
+  const total=dayStats.reduce((sum,day)=>sum+day.total,0),pct=total?Math.round(done/total*100):0;
   const attention=[...missed.values()].sort((a,b)=>b.count-a.count||a.task.name.localeCompare(b.task.name,'vi')).slice(0,4);
   const best=dayStats.reduce((winner,item)=>!winner||item.pct>winner.pct?item:winner,null);
   return {allDates,done,total,pct,noHomework,perfectDays,streak,breakdown,dayStats,contribution,attention,best};
@@ -79,9 +79,10 @@
   }
   return result;
  }
+ const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const meter=(label,done,total)=>`<div class="dashboard-meter"><div><span>${label}</span><strong>${done}/${total}</strong></div><div class="meter-track" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}"><span style="width:${total?done/total*100:0}%"></span></div></div>`;
  function insight(data,role){
-  if(!data.total)return {title:'Cuối tuần nghỉ ngơi',text:'Thứ Bảy và Chủ nhật không có danh sách việc chung, việc riêng.'};
+  if(!data.total)return {title:'Chưa có công việc',text:'Không có công việc cần thực hiện trong kỳ này.'};
   if(data.done===data.total)return {title:'Hoàn thành rất tốt',text:`Đã hoàn thành toàn bộ ${data.total} việc trong kỳ này.`};
   if(!data.attention.length)return {title:'Chưa có dữ liệu',text:'Hãy hoàn thành checklist để bắt đầu theo dõi tiến độ.'};
   const first=data.attention[0].task;
@@ -97,7 +98,7 @@
   const sharedTotal=data.contribution.khoi+data.contribution.nhan;
   const khoiShare=sharedTotal?Math.round(data.contribution.khoi/sharedTotal*100):0,nhanShare=sharedTotal?100-khoiShare:0;
   const contribution=sharedTotal?`<div class="contribution-layout"><div class="contribution-donut" style="--khoi-share:${khoiShare*3.6}deg" role="img" aria-label="Thanh Khôi ${data.contribution.khoi} việc, ${khoiShare} phần trăm; Thanh Nhân ${data.contribution.nhan} việc, ${nhanShare} phần trăm"><span><strong>${sharedTotal}</strong><small>việc chung</small></span></div><div class="contribution-legend"><div><i class="contribution-dot khoi" aria-hidden="true"></i><span>Thanh Khôi</span><strong>${data.contribution.khoi} · ${khoiShare}%</strong></div><div><i class="contribution-dot nhan" aria-hidden="true"></i><span>Thanh Nhân</span><strong>${data.contribution.nhan} · ${nhanShare}%</strong></div></div></div>`:'<p class="dashboard-empty">Chưa có việc chung hoàn thành trong kỳ.</p>';
-  const attention=data.attention.length?`<ol class="attention-list">${data.attention.map(({task,count})=>`<li><span>${role==='parents'&&task.owner!=='shared'?`${task.name} · ${task.owner==='khoi'?'Khôi':'Nhân'}`:task.name}</span><strong>${count} ngày</strong></li>`).join('')}</ol>`:'<p class="dashboard-empty">Không có việc bị bỏ sót.</p>';
+  const attention=data.attention.length?`<ol class="attention-list">${data.attention.map(({task,count})=>`<li><span>${role==='parents'&&task.owner!=='shared'?`${escape(task.name)} · ${task.owner==='khoi'?'Khôi':'Nhân'}`:escape(task.name)}</span><strong>${count} ngày</strong></li>`).join('')}</ol>`:'<p class="dashboard-empty">Không có việc bị bỏ sót.</p>';
   byId('dashboard-content').innerHTML=`
    <div class="dashboard-summary">
     <article class="summary-card progress-card"><div class="progress-ring" style="--progress:${data.pct*3.6}deg" role="progressbar" aria-label="Tiến độ hoàn thành" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${data.pct}"><span>${data.pct}%</span></div><div><h3>Tiến độ</h3><p>${data.done}/${data.total} việc đã xong</p></div></article>
@@ -105,7 +106,7 @@
     <article class="summary-card"><span class="summary-label">Chuỗi hoàn thành</span><strong>${data.streak}</strong><small>ngày liên tiếp trong kỳ</small></article>
     <article class="summary-card"><span class="summary-label">Không có bài</span><strong>${data.noHomework}</strong><small>lần đã xác nhận</small></article>
    </div>
-   <article class="dashboard-insight"><div class="insight-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M8.5 14.5A7 7 0 1 1 15.5 14.5C14.5 15.3 14 16.1 14 18h-4c0-1.9-.5-2.7-1.5-3.5Z"/></svg></div><div><h3>${tip.title}</h3><p>${tip.text}</p></div></article>
+   <article class="dashboard-insight"><div class="insight-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M8.5 14.5A7 7 0 1 1 15.5 14.5C14.5 15.3 14 16.1 14 18h-4c0-1.9-.5-2.7-1.5-3.5Z"/></svg></div><div><h3>${tip.title}</h3><p>${escape(tip.text)}</p></div></article>
    <div class="dashboard-details">
     <article class="dashboard-card trend-card"><header><div><h3>Nhịp hoàn thành</h3><p>${data.best?`Tốt nhất: ${shortDateFormat.format(parse(data.best.day))} · ${data.best.pct}%`:'Chưa có dữ liệu'}</p></div></header><div class="trend-chart">${chart.map(item=>`<div class="trend-column" title="${item.label}: ${item.done}/${item.total} việc"><strong>${item.pct}%</strong><div class="trend-track"><span style="height:${Math.max(item.pct,item.pct?8:0)}%"></span></div><small>${item.label}</small></div>`).join('')}</div></article>
     <article class="dashboard-card"><h3>Chi tiết tiến độ</h3><div class="dashboard-meters">${breakdown}</div></article>

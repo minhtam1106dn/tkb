@@ -1,23 +1,9 @@
 (() => {
  'use strict';
- const commonTasks = [
-  ['kitchen','Quét và lau khu bếp'], ['garage','Quét và lau nhà để xe'],
-  ['floor-2','Quét nhà tầng 2'], ['leaves','Lượm lá trước sân'],
-  ['trash','Vứt rác'], ['plants','Tưới cây'], ['table','Lau bàn'],
-  ['laundry','Phơi đồ trên tầng 3'],
-  ['stairs','Lượm rác cầu thang'], ['fish','Cho cá ăn']
- ];
- const privateTasks = [
-  ['bath','Tắm rửa'], ['uniform','Giặt đồ đi học'],
-  ['school-homework','Làm bài tập trên trường'], ['extra-homework','Làm bài tập học thêm'],
-  ['sm-homework','Làm bài tập ở SM'], ['prepare','Soạn thời khóa biểu']
- ];
  const optionalTasks=new Set(['extra-homework','sm-homework']);
- window.TKB_TASKS={common:commonTasks,private:privateTasks,optional:optionalTasks};
- function taskGroups() {
-  const personal=privateTasks.filter(([id])=>selectedStudent!=='nhan' || id!=='extra-homework');
-  return [['common-tasks','shared',commonTasks],['private-tasks',selectedStudent,personal]];
- }
+ function tasksFor(owner,day){return (window.TKBCloud?.getCatalog()||[]).filter(t=>t.owner===owner&&t.active_from<=day&&(!t.retired_on||day<t.retired_on)).map(t=>[t.task_id,t.name]);}
+ window.TKB_TASKS={forDay:tasksFor,optional:optionalTasks};
+ function taskGroups() {return [['common-tasks','shared',tasksFor('shared',selectedDate)],['private-tasks',selectedStudent,tasksFor(selectedStudent,selectedDate)]];}
  const prefix = 'tkb-checklist:v1:';
  const zone = 'Asia/Ho_Chi_Minh';
  const dateFormat = new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'});
@@ -61,6 +47,7 @@
   if (view==='fund') window.renderSnackFund?.();
  }
  function renderChecklist() {
+  byId('task-management').hidden=currentViewer!=='parents';
   const focused=document.activeElement?.matches("input[data-task]")?document.activeElement.id:null;
   window.TKBCloud?.watchDate(selectedDate);
   const student = students[selectedStudent];

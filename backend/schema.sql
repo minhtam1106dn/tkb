@@ -150,14 +150,71 @@ create table if not exists tkb_private.operations (
 );
 revoke all on tkb_private.operations from public, anon, authenticated;
 
-create or replace function tkb_private.valid_task(p_owner text,p_task text) returns boolean
-language sql immutable set search_path = '' as $$
- select case when p_owner = 'shared' then p_task = any(array[
- 'kitchen','garage','floor-2','leaves','trash','plants','table','laundry','stairs','fish'])
- when p_owner = 'khoi' then p_task = any(array['bath','uniform','school-homework','extra-homework','sm-homework','prepare'])
- when p_owner = 'nhan' then p_task = any(array['bath','uniform','school-homework','sm-homework','prepare']) else false end
+-- Catalog edits preserve completion IDs and historical day membership.
+create table if not exists public.tkb_task_catalog (
+ owner text not null check(owner in ('shared','khoi','nhan')),
+ task_id text not null check(length(task_id) between 1 and 80),
+ name text not null check(length(btrim(name)) between 1 and 160),
+ position integer not null default 100,
+ active_from date not null,
+ retired_on date,
+ revision bigint not null default 1,
+ primary key(owner,task_id)
+);
+alter table public.tkb_task_catalog enable row level security;
+revoke all on public.tkb_task_catalog from anon,authenticated;
+grant select on public.tkb_task_catalog to authenticated;
+drop policy if exists tkb_read_catalog on public.tkb_task_catalog;
+create policy tkb_read_catalog on public.tkb_task_catalog for select to authenticated
+ using(tkb_private.viewer_role() is not null and (owner='shared' or owner=tkb_private.viewer_role() or tkb_private.viewer_role()='parents'));
+insert into public.tkb_task_catalog(owner,task_id,name,position,active_from) values
+('shared','kitchen','Quét và lau khu bếp',0,'2000-01-01'),
+('shared','garage','Quét và lau nhà để xe',1,'2000-01-01'),
+('shared','floor-2','Quét nhà tầng 2',2,'2000-01-01'),
+('shared','leaves','Lượm lá trước sân',3,'2000-01-01'),
+('shared','trash','Vứt rác',4,'2000-01-01'),
+('shared','plants','Tưới cây',5,'2000-01-01'),
+('shared','table','Lau bàn',6,'2000-01-01'),
+('shared','laundry','Phơi đồ trên tầng 3',7,'2000-01-01'),
+('shared','stairs','Lượm rác cầu thang',8,'2000-01-01'),
+('shared','fish','Cho cá ăn',9,'2000-01-01'),
+('khoi','bath','Tắm rửa',0,'2000-01-01'),
+('khoi','uniform','Giặt đồ đi học',1,'2000-01-01'),
+('khoi','school-homework','Làm bài tập trên trường',2,'2000-01-01'),
+('khoi','extra-homework','Làm bài tập học thêm',3,'2000-01-01'),
+('khoi','sm-homework','Làm bài tập ở SM',4,'2000-01-01'),
+('khoi','prepare','Soạn thời khóa biểu',5,'2000-01-01'),
+('nhan','bath','Tắm rửa',0,'2000-01-01'),
+('nhan','uniform','Giặt đồ đi học',1,'2000-01-01'),
+('nhan','school-homework','Làm bài tập trên trường',2,'2000-01-01'),
+('nhan','sm-homework','Làm bài tập ở SM',3,'2000-01-01'),
+('nhan','prepare','Soạn thời khóa biểu',4,'2000-01-01')
+on conflict do nothing;
+create or replace function public.tkb_save_catalog(p_owner text,p_task text,p_name text,p_remove boolean,p_revision bigint)
+returns void language plpgsql security definer set search_path='' as $$
+declare existing public.tkb_task_catalog%rowtype;
+begin
+ if tkb_private.viewer_role() is distinct from 'parents' then raise exception 'Not allowed' using errcode='42501'; end if;
+ if p_owner is null or p_owner not in ('shared','khoi','nhan') or p_task is null or p_task !~ '^[a-z0-9-]{1,80}$' or p_remove is null or p_revision is null then raise exception 'Invalid task'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('catalog:'||p_owner||':'||p_task,0));
+ select * into existing from public.tkb_task_catalog where owner=p_owner and task_id=p_task;
+ if coalesce(existing.revision,0)<>p_revision or existing.retired_on is not null then raise exception 'Task changed. Reload and retry.' using errcode='40001'; end if;
+ if p_remove then
+  if existing.task_id is null then raise exception 'Unknown task'; end if;
+  update public.tkb_task_catalog set retired_on=(now() at time zone 'Asia/Ho_Chi_Minh')::date,revision=revision+1 where owner=p_owner and task_id=p_task;
+ else
+  if p_name is null or length(btrim(p_name)) not between 1 and 160 then raise exception 'Invalid name'; end if;
+  insert into public.tkb_task_catalog(owner,task_id,name,active_from) values(p_owner,p_task,btrim(p_name),(now() at time zone 'Asia/Ho_Chi_Minh')::date)
+  on conflict(owner,task_id) do update set name=excluded.name,revision=tkb_task_catalog.revision+1;
+ end if;
+end $$;
+revoke all on function public.tkb_save_catalog(text,text,text,boolean,bigint) from public,anon;
+grant execute on function public.tkb_save_catalog(text,text,text,boolean,bigint) to authenticated;
+create or replace function tkb_private.valid_task(p_owner text,p_task text,p_day date) returns boolean
+language sql stable set search_path='' as $$
+ select exists(select 1 from public.tkb_task_catalog where owner=p_owner and task_id=p_task and active_from<=p_day and (retired_on is null or p_day<retired_on))
 $$;
-revoke all on function tkb_private.valid_task(text,text) from public;
+revoke all on function tkb_private.valid_task(text,text,date) from public;
 
 create or replace function public.tkb_set_task(
  p_day date,p_owner text,p_task text,p_complete boolean,p_note text,
@@ -175,7 +232,7 @@ begin
  end if;
  if p_operation_id is null or p_day is null or p_owner is null or p_task is null or p_complete is null
    or p_expected_revision is null or p_expected_revision < 0
-   or not tkb_private.valid_task(p_owner,p_task) then raise exception 'Invalid task'; end if;
+   or not tkb_private.valid_task(p_owner,p_task,p_day) then raise exception 'Invalid task'; end if;
  -- Serialize duplicate retries before checking idempotency.
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(auth.uid()::text || p_operation_id::text,0));
  select o.result into result from tkb_private.operations o where user_id=auth.uid() and operation_id=p_operation_id;
@@ -213,7 +270,7 @@ begin
  if actor is null or actor='parents' or (p_owner<>'shared' and p_owner<>actor) then
   raise exception 'Not allowed' using errcode='42501'; end if;
  if p_day is null or p_owner is null or p_task is null or p_completed_at is null
-   or not tkb_private.valid_task(p_owner,p_task)
+   or not tkb_private.valid_task(p_owner,p_task,p_day)
    or p_day<>(p_completed_at at time zone 'Asia/Ho_Chi_Minh')::date or p_completed_at>now()
    or (p_note is not null and (p_note<>'không có' or p_owner='shared' or p_task not in ('extra-homework','sm-homework')))
  then raise exception 'Invalid import'; end if;
@@ -237,10 +294,10 @@ begin
  if p_from is null or p_to is null or p_from>p_to or p_to>(now() at time zone 'Asia/Ho_Chi_Minh')::date
    or p_to-p_from>62 then raise exception 'Invalid leaderboard range'; end if;
  return query
- with children(student,expected) as (values ('khoi'::text,6),('nhan'::text,5)),
+ with children(student) as (values ('khoi'::text),('nhan'::text)),
  days(day) as (select value::date from generate_series(p_from,p_to,interval '1 day') value where extract(isodow from value)<6),
  daily as (
-  select c.student,d.day,c.expected,
+  select c.student,d.day,(select count(*) from public.tkb_task_catalog catalog where catalog.owner=c.student and catalog.active_from<=d.day and (catalog.retired_on is null or d.day<catalog.retired_on)) as expected,
    count(t.task_id) filter(where t.owner=c.student)::bigint as private_done,
    count(t.task_id) filter(where t.owner='shared')::bigint as shared_done,
    least(15,coalesce(sum(case when t.note is null then case
@@ -250,17 +307,17 @@ begin
     else 0 end else 0 end),0))::bigint as early_bonus
   from days d cross join children c
   left join public.tkb_tasks t on t.day=d.day and t.completed and
-   (t.owner=c.student or (t.owner='shared' and t.completed_by=c.student))
-  group by c.student,d.day,c.expected
+   (t.owner=c.student or (t.owner='shared' and t.completed_by=c.student)) and tkb_private.valid_task(t.owner,t.task_id,d.day)
+  group by c.student,d.day
  ), scored as (
-  select d.*,round(60.0*d.private_done/d.expected)::bigint as completion_points,
+  select d.*,coalesce(round(60.0*d.private_done/nullif(d.expected,0)),0)::bigint as completion_points,
    d.shared_done*10 as shared_points,
-   case when d.private_done=d.expected then 10 else 0 end::bigint as consistency_points
+   case when d.expected>0 and d.private_done=d.expected then 10 else 0 end::bigint as consistency_points
   from daily d
  )
  select s.student,sum(s.private_done)::bigint,sum(s.expected)::bigint,sum(s.shared_done)::bigint,
   sum(s.completion_points)::bigint,sum(s.shared_points)::bigint,sum(s.early_bonus)::bigint,
-  count(*) filter(where s.private_done=s.expected)::bigint,sum(s.consistency_points)::bigint,
+  count(*) filter(where s.expected>0 and s.private_done=s.expected)::bigint,sum(s.consistency_points)::bigint,
   sum(s.completion_points+s.shared_points+s.early_bonus+s.consistency_points)::bigint
  from scored s group by s.student order by 10 desc,s.student;
 end $$;

@@ -6,7 +6,7 @@
  let state={days:{},queue:[]},storageKey='',refreshing=null,flushing=null,pulling=null;
  const listeners=new Set();
  const emit=()=>listeners.forEach(fn=>fn());
- const empty=()=>({days:{},queue:[],leaderboards:{},notes:{},fund:[]});
+ const empty=()=>({days:{},queue:[],leaderboards:{},notes:{},fund:[],catalog:[]});
  function savedSession(){
   try{
    const saved=JSON.parse(localStorage.getItem(sessionKey));
@@ -25,6 +25,7 @@
   if(!next.leaderboards || typeof next.leaderboards!=='object')next.leaderboards={};
   if(!next.notes || typeof next.notes!=='object')next.notes={};
   if(!Array.isArray(next.fund))next.fund=[];
+  if(!Array.isArray(next.catalog))next.catalog=[];
   state=next;
  }
  function persist(){localStorage.setItem(storageKey,JSON.stringify(state));}
@@ -57,7 +58,7 @@
   const r=await request(path,body,session.access_token);
   if(version!==generation)throw new Error('Người dùng đã thay đổi.');
   if(r.status===401 && retry){await refresh();return api(path,body,false);}
-  if(!r.ok){const e=new Error(r.status===403?'Tài khoản không được phép sửa mục này.':'Chưa đồng bộ được. Hệ thống sẽ thử lại.');e.httpStatus=r.status;throw e;}
+  if(!r.ok){const e=new Error(r.status===409?'Danh sách đã thay đổi trên thiết bị khác. Đóng rồi mở lại để thử lại.':r.status===403?'Tài khoản không được phép sửa mục này.':'Chưa đồng bộ được. Hệ thống sẽ thử lại.');e.httpStatus=r.status;throw e;}
   const text=await r.text();return text?JSON.parse(text):null;
  }
  function cacheRow(row){
@@ -94,13 +95,14 @@
  async function pull(day=activeDay){
   if(!profile || !day || !navigator.onLine)return;
   const version=generation;
-  const [rows,notes]=await Promise.all([
+  const [rows,notes,catalog]=await Promise.all([
    api(`/rest/v1/tkb_tasks?day=eq.${encodeURIComponent(day)}&select=*`),
-   api(`/rest/v1/tkb_parent_notes?day=eq.${encodeURIComponent(day)}&select=day,child,message,updated_at`)
+   api(`/rest/v1/tkb_parent_notes?day=eq.${encodeURIComponent(day)}&select=day,child,message,updated_at`),
+   api("/rest/v1/tkb_task_catalog?select=*&order=position,task_id")
   ]);
   await lock(()=>{
    if(version!==generation)return;
-   load();for(const row of rows)cacheRow(row);
+   load();state.catalog=catalog;for(const row of rows)cacheRow(row);
    for(const child of ['khoi','nhan'])delete state.notes[`${day}:${child}`];
    for(const note of notes)state.notes[`${note.day}:${note.child}`]=note;
    persist();
@@ -172,25 +174,29 @@
  }
  async function activate(role,next,bootstrap){
   const requestedDay=activeDay;
+  const previous={session,profile,state,storageKey};
   generation++;session=next;
   try{
    profile={role,id:next.user.id};
    storageKey=`tkb-cloud:v1:${new URL(config.url).hostname}:${profile.id}`;
    load();
-   let schedules,rows,notes=[];
+   let schedules,rows,notes=[],catalog;
    if(bootstrap){
     schedules=bootstrap.schedules;rows=bootstrap.tasks;
-    notes=bootstrap.notes||[];
+    notes=bootstrap.notes||[];catalog=bootstrap.catalog;
    }else{
-    const [profiles,loadedSchedules,loadedRows,loadedNotes]=await Promise.all([
+    const [profiles,loadedSchedules,loadedRows,loadedNotes,loadedCatalog]=await Promise.all([
      api('/rest/v1/tkb_profiles?select=role'),
      api('/rest/v1/tkb_timetables?select=student,days'),
      requestedDay?api(`/rest/v1/tkb_tasks?day=eq.${encodeURIComponent(requestedDay)}&select=*`):Promise.resolve([]),
      requestedDay?api(`/rest/v1/tkb_parent_notes?day=eq.${encodeURIComponent(requestedDay)}&select=day,child,message,updated_at`):Promise.resolve([]),
+     api('/rest/v1/tkb_task_catalog?select=*&order=position,task_id'),
     ]);
     if(profiles.length!==1 || profiles[0].role!==role)throw new Error('Tài khoản chưa được cấu hình đúng quyền.');
-    schedules=loadedSchedules;rows=loadedRows;notes=loadedNotes;
+    schedules=loadedSchedules;rows=loadedRows;notes=loadedNotes;catalog=loadedCatalog;
    }
+   if(!Array.isArray(catalog))catalog=await api('/rest/v1/tkb_task_catalog?select=*&order=position,task_id');
+   await lock(()=>{load();state.catalog=catalog;persist();});
    if(rows.length || notes.length)await lock(()=>{load();for(const row of rows)cacheRow(row);for(const note of notes)state.notes[`${note.day}:${note.child}`]=note;persist();});
    status=state.queue.length?'Đang đồng bộ':'Đã đồng bộ';
    persistSession();
@@ -199,7 +205,7 @@
    const version=generation;
    setTimeout(()=>{if(version===generation)importLocal().then(sync).catch(error=>{if(version===generation)failure(error);});},0);
    return {role,schedules};
-  }catch(error){logout();throw error;}
+  }catch(error){generation++;session=previous.session;profile=previous.profile;state=previous.state;storageKey=previous.storageKey;throw error;}
  }
  async function login(role,password){
   const r=await request('/functions/v1/tkb-login',{role,password,day:activeDay});
@@ -233,7 +239,7 @@
   generation++;session=null;profile=null;state=empty();clearInterval(timer);timer=null;status='';
   try{localStorage.removeItem(sessionKey);}catch(_){}
   if(token)fetch(config.url+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:config.anonKey,Authorization:'Bearer '+token},signal:AbortSignal.timeout(10000)}).catch(()=>{});
-  emit();
+  emit();window.dispatchEvent(new Event('tkb-signed-out'));
  }
  async function save(day,owner,id,complete,note,expected){
   const actor=profile?.role,version=generation;
@@ -290,7 +296,12 @@
   }
   if(version===generation)localStorage.setItem(marker,'1');
  }
- window.TKBCloud={login,restore,logout,save,saveParentNote,loadSnackFund,addSnackTransaction,deleteSnackTransaction,sync,warmup,loadRange,loadLeaderboard,
+ async function saveCatalog(owner,id,name,remove,revision){
+  if(profile?.role!=='parents')throw new Error('Chỉ Ba Mẹ được quản lý công việc.');
+  await api('/rest/v1/rpc/tkb_save_catalog',{p_owner:owner,p_task:id,p_name:name,p_remove:remove,p_revision:revision});
+  await pull();window.dispatchEvent(new Event('tkb-ranking-change'));
+ }
+ window.TKBCloud={saveCatalog,getCatalog(){return profile?state.catalog:[];},login,restore,logout,save,saveParentNote,loadSnackFund,addSnackTransaction,deleteSnackTransaction,sync,warmup,loadRange,loadLeaderboard,
   get role(){return profile?.role;},get status(){return status;},
   getRows(from,to){return profile?rowsBetween(from,to):[];},
   getSnackFund(){return profile?state.fund:[];},

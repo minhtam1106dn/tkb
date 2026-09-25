@@ -46,10 +46,12 @@
   }
  }
  async function load(force=false,quiet=false){
+  if(!currentViewer || window.TKBCloud?.role!==currentViewer)return;
+  const role=currentViewer;
   if(loading || (!force&&Date.now()-loadedAt<30000))return;
   loading=true;if(!quiet)byId('fund-feedback').textContent='Đang cập nhật quỹ…';
-  try{await window.TKBCloud.loadSnackFund();loadedAt=Date.now();if(!quiet)byId('fund-feedback').textContent='';}
-  catch(error){byId('fund-error').textContent=error.message||'Chưa tải được quỹ ăn vặt.';}
+  try{await window.TKBCloud.loadSnackFund();loadedAt=Date.now();byId('fund-error').textContent='';if(!quiet)byId('fund-feedback').textContent='';}
+  catch(error){if(currentViewer===role && window.TKBCloud?.role===role)byId('fund-error').textContent=error.message||'Chưa tải được quỹ ăn vặt.';}
   finally{loading=false;render();}
  }
  function open(){render();void load(true);}
