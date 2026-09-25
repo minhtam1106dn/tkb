@@ -53,7 +53,7 @@ Deno.serve(async request => {
    fetch(`${projectUrl}/rest/v1/tkb_timetables?select=student,days`,{headers:userHeaders}),
    taskRequest,
    noteRequest,
-   fetch(`${projectUrl}/rest/v1/tkb_task_catalog?select=*&order=position,task_id`,{headers:userHeaders}),
+   fetch(`${projectUrl}/rest/v1/rpc/tkb_catalog_entries`,{headers:userHeaders}),
   ]);
   if(!profileResult.ok)return new Response(JSON.stringify({error:'Dịch vụ chưa sẵn sàng.'}),{status:503,headers:cors});
   const profiles=await profileResult.json();

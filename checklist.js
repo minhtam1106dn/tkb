@@ -1,7 +1,7 @@
 (() => {
  'use strict';
  const optionalTasks=new Set(['extra-homework','sm-homework']);
- function tasksFor(owner,day){return (window.TKBCloud?.getCatalog()||[]).filter(t=>t.owner===owner&&t.active_from<=day&&(!t.retired_on||day<t.retired_on)).map(t=>[t.task_id,t.name]);}
+ function tasksFor(owner,day){return (window.TKBCloud?.catalogForDay(owner,day)||[]).map(t=>[t.task_id,t.name]);}
  window.TKB_TASKS={forDay:tasksFor,optional:optionalTasks};
  function taskGroups() {return [['common-tasks','shared',tasksFor('shared',selectedDate)],['private-tasks',selectedStudent,tasksFor(selectedStudent,selectedDate)]];}
  const prefix = 'tkb-checklist:v1:';

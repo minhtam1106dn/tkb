@@ -27,8 +27,9 @@ let result=[];let status=200;if(window.testExpire&&path.includes('tkb_snack_fund
 if(path.includes('tkb-login')){if(body.password==='wrong')return new Response('{}',{status:401});testRole=body.role;result={access_token:'test-token',refresh_token:'test-refresh',user:{id:body.role},bootstrap:{catalog:catalog.filter(t=>body.role==='parents'||t.owner==='shared'||t.owner===body.role),role:body.role,day:body.day,schedules:[],tasks:[],notes:[]}};}
 else if(path.includes('/auth/v1/token')){testRole=JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('tkb-session:')))).role;result={access_token:'test-token',refresh_token:'test-refresh',user:{id:testRole}};}
 else if(path.includes('tkb_profiles'))result=[{role:testRole}];
+else if(path.includes('tkb_save_daily_catalog')){let t=catalog.find(x=>x.day===body.p_day&&x.owner===body.p_owner&&x.task_id===body.p_task);if(t){t.name=body.p_name;t.removed=body.p_remove;t.revision++;}else catalog.push({day:body.p_day,owner:body.p_owner,task_id:body.p_task,name:body.p_name,removed:body.p_remove,revision:1,position:100});result=null;}
 else if(path.includes('tkb_save_catalog')){let t=catalog.find(x=>x.owner===body.p_owner&&x.task_id===body.p_task);if(t){if(body.p_remove)t.retired_on=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh'}).format(new Date());else t.name=body.p_name;t.revision++;}else catalog.push({owner:body.p_owner,task_id:body.p_task,name:body.p_name,active_from:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh'}).format(new Date()),retired_on:null,revision:1});result=null;}
-else if(path.includes('tkb_task_catalog'))result=catalog.filter(t=>testRole==='parents'||t.owner==='shared'||t.owner===testRole);
+else if(path.includes('tkb_catalog_entries'))result=catalog.filter(t=>testRole==='parents'||t.owner==='shared'||t.owner===testRole);
 return new Response(JSON.stringify(result),{status,headers:{'Content-Type':'application/json'}});
 };window.confirm=()=>true;window.testErrors=[];window.addEventListener('error',e=>testErrors.push(e.message));})();'''.replace('CATALOG',json.dumps(catalog))
 ev("if(location.origin==='http://127.0.0.1:8765')for(const k of Object.keys(localStorage))if(k.startsWith('tkb-session:')||k.startsWith('tkb-cloud:'))localStorage.removeItem(k)")
@@ -52,6 +53,7 @@ click('#change-viewer');check("TKBCloud.role==='parents' && !document.getElement
 login('nhan','wrong');check("currentViewer==='parents'&&TKBCloud.role==='parents'",'failed switch preserves current viewer')
 click('#viewer-cancel');check("!document.getElementById('viewer-dialog').open&&currentViewer==='parents'",'cancel returns to parent')
 click('[data-view="checklist"]');click('#manage-tasks')
+ev("document.getElementById('catalog-scope').value='future';document.getElementById('catalog-scope').dispatchEvent(new Event('change'))")
 for owner in ['shared','khoi','nhan']:
  ev(f"document.getElementById('task-owner').value='{owner}';document.getElementById('task-owner').dispatchEvent(new Event('change'))")
  ev("document.getElementById('catalog-name').value='Việc mới kiểm thử';document.getElementById('catalog-form').requestSubmit()");time.sleep(.4)
@@ -60,10 +62,25 @@ for owner in ['shared','khoi','nhan']:
  check("document.getElementById('catalog-list').textContent.includes('Đã sửa <b>an toàn</b>')&&!document.querySelector('#catalog-list b')",owner+' update safely')
  ev("[...document.querySelectorAll('#catalog-list li')].find(x=>x.textContent.includes('Đã sửa')).querySelectorAll('button')[1].click()");time.sleep(.4)
  check("!document.getElementById('catalog-list').textContent.includes('Đã sửa')",owner+' delete')
+click('#catalog-close')
+ev("document.getElementById('checklist-date').value='2026-09-21';document.getElementById('checklist-date').dispatchEvent(new Event('change'))")
+click('#manage-tasks')
+check("document.getElementById('catalog-scope').value==='day'&&document.getElementById('catalog-scope-note').textContent.includes('21/09/2026')",'selected date scope')
+for owner in ['shared','khoi','nhan']:
+ ev(f"document.getElementById('task-owner').value='{owner}';document.getElementById('task-owner').dispatchEvent(new Event('change'))")
+ ev("document.getElementById('catalog-name').value='Chỉ riêng thứ Hai';document.getElementById('catalog-form').requestSubmit()");time.sleep(.4)
+ check(f"TKBCloud.catalogForDay('{owner}','2026-09-21').some(t=>t.name==='Chỉ riêng thứ Hai')&&!TKBCloud.catalogForDay('{owner}','2026-09-22').some(t=>t.name==='Chỉ riêng thứ Hai')",owner+' daily add isolation')
+ ev("[...document.querySelectorAll('#catalog-list li')].find(x=>x.textContent.includes('Chỉ riêng thứ Hai')).querySelector('button').click();document.getElementById('catalog-name').value='Tên riêng đã sửa';document.getElementById('catalog-form').requestSubmit()");time.sleep(.4)
+ check("document.getElementById('catalog-list').textContent.includes('Tên riêng đã sửa')",owner+' daily edit')
+ ev("[...document.querySelectorAll('#catalog-list li')].find(x=>x.textContent.includes('Tên riêng đã sửa')).querySelectorAll('button')[1].click()");time.sleep(.4)
+ check("!document.getElementById('catalog-list').textContent.includes('Tên riêng đã sửa')",owner+' daily delete')
+# Removing a regular task is also isolated to that date.
+ev("document.getElementById('task-owner').value='khoi';document.getElementById('task-owner').dispatchEvent(new Event('change'));[...document.querySelectorAll('#catalog-list li')].find(x=>x.textContent.includes('Tắm rửa')).querySelectorAll('button')[1].click()");time.sleep(.4)
+check("!TKBCloud.catalogForDay('khoi','2026-09-21').some(t=>t.task_id==='bath')&&TKBCloud.catalogForDay('khoi','2026-09-22').some(t=>t.task_id==='bath')",'daily deletion keeps next day')
 for width in [375,393,430,768,1024,1440]:
  call('Emulation.setDeviceMetricsOverride',{'width':width,'height':900,'deviceScaleFactor':1,'mobile':False})
  check("document.documentElement.scrollWidth<=innerWidth && document.getElementById('task-editor').scrollWidth<=document.getElementById('task-editor').clientWidth",f'no overflow {width}')
-click('#catalog-close');click('[data-view="fund"]');time.sleep(.5)
+click('#catalog-close');click('#checklist-today');click('[data-view="fund"]');time.sleep(.5)
 check("document.getElementById('fund-error').textContent===''",'fund no stale login error')
 ev("window.testExpire=true;window.renderSnackFund()");time.sleep(.5)
 check("testRequests.some(p=>p.includes('/auth/v1/token'))&&document.getElementById('fund-error').textContent===''",'expired access token refreshed')

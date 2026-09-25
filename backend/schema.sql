@@ -210,9 +210,50 @@ begin
 end $$;
 revoke all on function public.tkb_save_catalog(text,text,text,boolean,bigint) from public,anon;
 grant execute on function public.tkb_save_catalog(text,text,text,boolean,bigint) to authenticated;
+-- Per-day exceptions override only the matching task and date.
+create table if not exists public.tkb_daily_catalog (
+ day date not null,
+ owner text not null check(owner in ('shared','khoi','nhan')),
+ task_id text not null check(task_id ~ '^[a-z0-9-]{1,80}$'),
+ name text not null check(length(btrim(name)) between 1 and 160),
+ removed boolean not null default false,
+ revision bigint not null default 1,
+ primary key(day,owner,task_id)
+);
+alter table public.tkb_daily_catalog enable row level security;
+revoke all on public.tkb_daily_catalog from anon,authenticated;
+grant select on public.tkb_daily_catalog to authenticated;
+drop policy if exists tkb_read_daily_catalog on public.tkb_daily_catalog;
+create policy tkb_read_daily_catalog on public.tkb_daily_catalog for select to authenticated
+ using(tkb_private.viewer_role() is not null and (owner='shared' or owner=tkb_private.viewer_role() or tkb_private.viewer_role()='parents'));
+create or replace function public.tkb_catalog_entries() returns jsonb
+language sql stable security invoker set search_path='' as $$
+ select coalesce(jsonb_agg(entry),'[]'::jsonb) from (
+  select to_jsonb(c)||jsonb_build_object('day',null,'removed',false) entry from public.tkb_task_catalog c
+  union all
+  select to_jsonb(d)||jsonb_build_object('position',100) from public.tkb_daily_catalog d
+ ) entries
+$$;
+revoke all on function public.tkb_catalog_entries() from public,anon;
+grant execute on function public.tkb_catalog_entries() to authenticated;
+create or replace function public.tkb_save_daily_catalog(p_day date,p_owner text,p_task text,p_name text,p_remove boolean,p_revision bigint)
+returns void language plpgsql security definer set search_path='' as $$
+declare existing public.tkb_daily_catalog%rowtype;
+begin
+ if tkb_private.viewer_role() is distinct from 'parents' then raise exception 'Not allowed' using errcode='42501'; end if;
+ if p_day is null or extract(isodow from p_day)>5 or p_owner is null or p_owner not in ('shared','khoi','nhan') or p_task is null or p_task !~ '^[a-z0-9-]{1,80}$' or p_remove is null or p_revision is null or p_name is null or length(btrim(p_name)) not between 1 and 160 then raise exception 'Invalid task'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('daily-catalog:'||p_day::text||':'||p_owner||':'||p_task,0));
+ select * into existing from public.tkb_daily_catalog where day=p_day and owner=p_owner and task_id=p_task;
+ if coalesce(existing.revision,0)<>p_revision then raise exception 'Task changed. Reload and retry.' using errcode='40001'; end if;
+ insert into public.tkb_daily_catalog(day,owner,task_id,name,removed) values(p_day,p_owner,p_task,btrim(p_name),p_remove)
+ on conflict(day,owner,task_id) do update set name=excluded.name,removed=excluded.removed,revision=tkb_daily_catalog.revision+1;
+end $$;
+revoke all on function public.tkb_save_daily_catalog(date,text,text,text,boolean,bigint) from public,anon;
+grant execute on function public.tkb_save_daily_catalog(date,text,text,text,boolean,bigint) to authenticated;
 create or replace function tkb_private.valid_task(p_owner text,p_task text,p_day date) returns boolean
 language sql stable set search_path='' as $$
- select exists(select 1 from public.tkb_task_catalog where owner=p_owner and task_id=p_task and active_from<=p_day and (retired_on is null or p_day<retired_on))
+ select coalesce((select not removed from public.tkb_daily_catalog where day=p_day and owner=p_owner and task_id=p_task),
+ exists(select 1 from public.tkb_task_catalog where owner=p_owner and task_id=p_task and active_from<=p_day and (retired_on is null or p_day<retired_on)))
 $$;
 revoke all on function tkb_private.valid_task(text,text,date) from public;
 
@@ -297,7 +338,7 @@ begin
  with children(student) as (values ('khoi'::text),('nhan'::text)),
  days(day) as (select value::date from generate_series(p_from,p_to,interval '1 day') value where extract(isodow from value)<6),
  daily as (
-  select c.student,d.day,(select count(*) from public.tkb_task_catalog catalog where catalog.owner=c.student and catalog.active_from<=d.day and (catalog.retired_on is null or d.day<catalog.retired_on)) as expected,
+  select c.student,d.day,(select count(*) from (select task_id from public.tkb_task_catalog where owner=c.student union select task_id from public.tkb_daily_catalog where owner=c.student and day=d.day) ids where tkb_private.valid_task(c.student,ids.task_id,d.day)) as expected,
    count(t.task_id) filter(where t.owner=c.student)::bigint as private_done,
    count(t.task_id) filter(where t.owner='shared')::bigint as shared_done,
    least(15,coalesce(sum(case when t.note is null then case
