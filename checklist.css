@@ -80,3 +80,6 @@ html{scrollbar-gutter:stable}.panel-toolbar{display:grid;grid-template-columns:m
 html.task-editor-open {overflow:hidden;overscroll-behavior:none}
 body.task-editor-open {position:fixed;top:var(--task-editor-page-top);left:0;width:100%;overflow:hidden}
 #task-editor {position:fixed;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+
+/* One child uses the full row; the parent view retains its two cards. */
+@media(min-width:700px){.today-grid>.today-card:only-child{grid-column:1 / -1}}
