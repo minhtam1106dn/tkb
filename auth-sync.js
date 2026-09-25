@@ -301,13 +301,21 @@
   await api(day?'/rest/v1/rpc/tkb_save_daily_catalog':'/rest/v1/rpc/tkb_save_catalog',{p_owner:owner,p_task:id,p_name:name,p_remove:remove,p_revision:revision,...(day?{p_day:day}:{})});
   await pull();window.dispatchEvent(new Event('tkb-ranking-change'));
  }
- function catalogForDay(owner,day){
+ function catalogForDay(owner,day,includeDaily=true){
   const items=new Map();
-  for(const task of state.catalog||[])if(!task.day && task.owner===owner && task.active_from<=day && (!task.retired_on||day<task.retired_on))items.set(task.task_id,{...task,dailyRevision:0});
-  for(const task of state.catalog||[])if(task.day===day && task.owner===owner){if(task.removed)items.delete(task.task_id);else items.set(task.task_id,{...task,position:items.get(task.task_id)?.position??task.position??100,dailyRevision:task.revision});}
-  return [...items.values()].sort((a,b)=>(a.position??100)-(b.position??100)||a.task_id.localeCompare(b.task_id));
+  for(const task of state.catalog||[])if(!task.kind && !task.day && task.owner===owner && task.active_from<=day && (!task.retired_on||day<task.retired_on))items.set(task.task_id,{...task,dailyRevision:0});
+  for(const task of state.catalog||[])if(includeDaily && !task.kind && task.day===day && task.owner===owner){if(task.removed)items.delete(task.task_id);else items.set(task.task_id,{...task,position:items.get(task.task_id)?.position??task.position??100,dailyRevision:task.revision});}
+  const orders=(state.catalog||[]).filter(t=>t.kind==='order'&&t.owner===owner);
+  const order=(includeDaily&&orders.find(t=>t.scope==='day'&&t.day===day))||orders.filter(t=>t.scope==='future'&&t.day<=day).sort((a,b)=>b.day.localeCompare(a.day))[0];
+  const rank=new Map((order?.task_ids||[]).map((id,i)=>[id,i]));
+  return [...items.values()].sort((a,b)=>(rank.get(a.task_id)??10000)-(rank.get(b.task_id)??10000)||(a.position??100)-(b.position??100)||a.task_id.localeCompare(b.task_id));
  }
- window.TKBCloud={catalogForDay,saveCatalog,getCatalog(){return profile?state.catalog:[];},login,restore,logout,save,saveParentNote,loadSnackFund,addSnackTransaction,deleteSnackTransaction,sync,warmup,loadRange,loadLeaderboard,
+ async function reorderCatalog(owner,scope,day,ids,revision){
+  if(profile?.role!=='parents')throw new Error('Chỉ Ba Mẹ được sắp xếp công việc.');
+  await api('/rest/v1/rpc/tkb_reorder_catalog',{p_owner:owner,p_scope:scope,p_day:day,p_ids:ids,p_revision:revision});
+  await pull();
+ }
+ window.TKBCloud={reorderCatalog,orderRevision(owner,scope,day){return (state.catalog||[]).find(t=>t.kind==='order'&&t.owner===owner&&t.scope===scope&&t.day===day)?.revision||0;},catalogForDay,saveCatalog,getCatalog(){return profile?state.catalog.filter(t=>!t.kind):[];},login,restore,logout,save,saveParentNote,loadSnackFund,addSnackTransaction,deleteSnackTransaction,sync,warmup,loadRange,loadLeaderboard,
   get role(){return profile?.role;},get status(){return status;},
   getRows(from,to){return profile?rowsBetween(from,to):[];},
   getSnackFund(){return profile?state.fund:[];},

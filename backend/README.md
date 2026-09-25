@@ -30,3 +30,5 @@ If websocket-client is missing, install it into a temporary directory and set PY
 Check real sign-ins, wrong passwords, forbidden anonymous/parent/cross-child writes, concurrent shared completion, original completer undo, stale revisions, idempotent retry, cross-session visibility, local migration and offline replay. Do not change existing family task records for tests. Use a dedicated test origin and remove only records created by the test.
 
 - Per-day task changes use `tkb_daily_catalog` and the parent-only `tkb_save_daily_catalog` RPC. A daily entry overrides the same task ID for that day only; removed entries leave completion history untouched. `tkb_catalog_entries` returns both catalogs under the existing RLS rules. Checklist, dashboard and leaderboard resolve the same daily membership. Weekend rest days remain unchanged.
+
+- Task order is stored separately in `tkb_catalog_orders` through `tkb_reorder_catalog`. A daily order affects only its date; a future order starts on its effective date. Reordering preserves task IDs, names and completion data. The RPC validates exact list membership and revision before writing.

@@ -226,12 +226,28 @@ grant select on public.tkb_daily_catalog to authenticated;
 drop policy if exists tkb_read_daily_catalog on public.tkb_daily_catalog;
 create policy tkb_read_daily_catalog on public.tkb_daily_catalog for select to authenticated
  using(tkb_private.viewer_role() is not null and (owner='shared' or owner=tkb_private.viewer_role() or tkb_private.viewer_role()='parents'));
+create table if not exists public.tkb_catalog_orders (
+ owner text not null check(owner in ('shared','khoi','nhan')),
+ scope text not null check(scope in ('day','future')),
+ day date not null,
+ task_ids text[] not null,
+ revision bigint not null default 1,
+ primary key(owner,scope,day)
+);
+alter table public.tkb_catalog_orders enable row level security;
+revoke all on public.tkb_catalog_orders from anon,authenticated;
+grant select on public.tkb_catalog_orders to authenticated;
+drop policy if exists tkb_read_catalog_orders on public.tkb_catalog_orders;
+create policy tkb_read_catalog_orders on public.tkb_catalog_orders for select to authenticated
+ using(tkb_private.viewer_role() is not null and (owner='shared' or owner=tkb_private.viewer_role() or tkb_private.viewer_role()='parents'));
 create or replace function public.tkb_catalog_entries() returns jsonb
 language sql stable security invoker set search_path='' as $$
  select coalesce(jsonb_agg(entry),'[]'::jsonb) from (
   select to_jsonb(c)||jsonb_build_object('day',null,'removed',false) entry from public.tkb_task_catalog c
   union all
   select to_jsonb(d)||jsonb_build_object('position',100) from public.tkb_daily_catalog d
+  union all
+  select to_jsonb(o)||jsonb_build_object('kind','order') from public.tkb_catalog_orders o
  ) entries
 $$;
 revoke all on function public.tkb_catalog_entries() from public,anon;
@@ -256,6 +272,28 @@ language sql stable set search_path='' as $$
  exists(select 1 from public.tkb_task_catalog where owner=p_owner and task_id=p_task and active_from<=p_day and (retired_on is null or p_day<retired_on)))
 $$;
 revoke all on function tkb_private.valid_task(text,text,date) from public;
+
+create or replace function public.tkb_reorder_catalog(p_owner text,p_scope text,p_day date,p_ids text[],p_revision bigint)
+returns void language plpgsql security definer set search_path='' as $$
+declare expected text[]; previous_revision bigint;
+begin
+ if tkb_private.viewer_role() is distinct from 'parents' then raise exception 'Not allowed' using errcode='42501'; end if;
+ if p_owner is null or p_owner not in ('shared','khoi','nhan') or p_scope is null or p_scope not in ('day','future') or p_day is null or p_ids is null or p_revision is null or cardinality(p_ids)>500 or cardinality(p_ids)=0 or array_position(p_ids,null) is not null then raise exception 'Invalid order'; end if;
+ if (p_scope='future' and p_day<>(now() at time zone 'Asia/Ho_Chi_Minh')::date) or (p_scope='day' and extract(isodow from p_day)>5) then raise exception 'Invalid day'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('catalog-order:'||p_owner||':'||p_scope||':'||p_day::text,0));
+ select revision into previous_revision from public.tkb_catalog_orders where owner=p_owner and scope=p_scope and day=p_day;
+ if coalesce(previous_revision,0)<>p_revision then raise exception 'Order changed' using errcode='40001'; end if;
+ if p_scope='future' then
+  select array_agg(task_id order by task_id) into expected from public.tkb_task_catalog where owner=p_owner and active_from<=p_day and (retired_on is null or p_day<retired_on);
+ else
+  select array_agg(task_id order by task_id) into expected from (select task_id from public.tkb_task_catalog where owner=p_owner union select task_id from public.tkb_daily_catalog where owner=p_owner and day=p_day) ids where tkb_private.valid_task(p_owner,task_id,p_day);
+ end if;
+ if expected is distinct from (select array_agg(id order by id) from unnest(p_ids) id) then raise exception 'Task list changed' using errcode='40001'; end if;
+ insert into public.tkb_catalog_orders(owner,scope,day,task_ids) values(p_owner,p_scope,p_day,p_ids)
+ on conflict(owner,scope,day) do update set task_ids=excluded.task_ids,revision=tkb_catalog_orders.revision+1;
+end $$;
+revoke all on function public.tkb_reorder_catalog(text,text,date,text[],bigint) from public,anon;
+grant execute on function public.tkb_reorder_catalog(text,text,date,text[],bigint) to authenticated;
 
 create or replace function public.tkb_set_task(
  p_day date,p_owner text,p_task text,p_complete boolean,p_note text,

@@ -1,7 +1,7 @@
 -- Transactional integration test: no fixture or completion survives rollback.
 begin;
 do $$
-declare parent_id uuid; khoi_id uuid; nhan_id uuid; d date := (now() at time zone 'Asia/Ho_Chi_Minh')::date; o text; n integer;
+declare parent_id uuid; khoi_id uuid; nhan_id uuid; d date := (now() at time zone 'Asia/Ho_Chi_Minh')::date; o text; n integer; ids text[];
 begin
  select user_id into parent_id from public.tkb_profiles where role='parents';
  select user_id into khoi_id from public.tkb_profiles where role='khoi';
@@ -46,7 +46,27 @@ begin
  assert tkb_private.valid_task('khoi','bath','2026-09-22');
  assert (select private_expected from public.tkb_leaderboard('2026-09-21','2026-09-21') where student='khoi')=5;
  assert (select private_expected from public.tkb_leaderboard('2026-09-22','2026-09-22') where student='khoi')=6;
+
+ select array_agg(task_id order by task_id desc) into ids from public.tkb_task_catalog where owner='khoi' and active_from<=d and (retired_on is null or d<retired_on);
+ perform public.tkb_reorder_catalog('khoi','future',d,ids,0);
+ assert (select task_ids from public.tkb_catalog_orders where owner='khoi' and scope='future' and day=d)=ids;
+ begin
+  perform public.tkb_reorder_catalog('khoi','future',d,ids,0);
+  raise exception 'Stale order accepted';
+ exception when serialization_failure then null; end;
+ begin
+  perform public.tkb_reorder_catalog('khoi','future',d,array[ids[1],ids[1]],1);
+  raise exception 'Invalid order accepted';
+ exception when serialization_failure then null; end;
+ select array_agg(task_id order by task_id desc) into ids from public.tkb_task_catalog where owner='khoi' and tkb_private.valid_task('khoi',task_id,'2026-09-22');
+ perform public.tkb_reorder_catalog('khoi','day','2026-09-22',ids,0);
+ assert not exists(select 1 from public.tkb_catalog_orders where owner='khoi' and scope='day' and day='2026-09-23');
+ assert (select private_expected from public.tkb_leaderboard('2026-09-22','2026-09-22') where student='khoi')=6;
  perform set_config('request.jwt.claim.sub',khoi_id::text,true);
+ begin
+  perform public.tkb_reorder_catalog('khoi','day','2026-09-22',ids,1);
+  raise exception 'Child reorder accepted';
+ exception when insufficient_privilege then null; end;
  begin
   perform public.tkb_save_daily_catalog('2026-09-21','khoi','test-child-denied','Không được phép',false,0);
   raise exception 'Child daily write accepted';

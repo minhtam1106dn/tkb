@@ -58,3 +58,20 @@ html{scrollbar-gutter:stable}.panel-toolbar{display:grid;grid-template-columns:m
 .catalog-heading {display:flex;align-items:start;gap:12px;justify-content:space-between}
 .catalog-heading h2 {font-size:1.25rem;line-height:1.4}
 .catalog-heading button {flex-shrink:0}
+
+#task-editor .catalog-select {position:relative}
+#task-editor .catalog-select-trigger {display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:48px;padding:10px 14px;background:#fff;border-color:#94a3b8;text-align:left}
+#task-editor svg {width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+#task-editor .catalog-select-menu {position:absolute;z-index:10;top:calc(100% + 6px);left:0;right:0;padding:6px;border:1px solid #c7d5e7;border-radius:12px;background:#fff;box-shadow:0 10px 28px #14244726}
+#task-editor .catalog-select-menu button {display:block;width:100%;border:0;background:#fff;text-align:left;box-shadow:none;padding:10px 12px}
+#task-editor .catalog-select-menu button[aria-selected=true] {background:#eaf2ff;color:#164bb6;font-weight:700}
+#task-editor .catalog-select-menu button:focus {outline:2px solid #2563eb;outline-offset:-2px;background:#f0f5ff}
+#catalog-list li {display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;scroll-margin:20px}
+#catalog-list .catalog-task-name {font-weight:600}
+.catalog-row-actions {grid-column:2;display:flex;gap:8px;flex-wrap:wrap}
+#task-editor .catalog-drag {grid-row:1;cursor:grab;touch-action:none;user-select:none;padding:8px;background:#f6f9fe;color:#526581}
+#task-editor .catalog-drag svg {stroke-width:3}
+#catalog-list .is-dragging {background:#eaf2ff;border:2px dashed #3777ec;border-radius:12px;opacity:.85}
+#task-editor .catalog-drag:active {cursor:grabbing;transform:none}
+#catalog-sort-help {font-size:13px;color:#526581}
+@media(min-width:600px){#catalog-list li {grid-template-columns:44px minmax(0,1fr) auto}.catalog-row-actions {grid-column:3;grid-row:1}}

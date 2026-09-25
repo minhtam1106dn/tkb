@@ -33,3 +33,15 @@ footer{padding:10px 4px;color:#74819c}
 /* Parent profile: clearer mobile grouping; desktop account action follows the header edge */
 @media(max-width:699px){header[data-viewer="parents"] .profile{display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;gap:9px;padding-top:58px;text-align:center}header[data-viewer="parents"] .profile .heading{display:contents}header[data-viewer="parents"] .grade-badge{grid-row:1}header[data-viewer="parents"] .profile-visual{grid-row:2;flex-basis:auto;width:150px;height:72px}header[data-viewer="parents"] .profile-avatar{width:70px;height:70px}header[data-viewer="parents"] .avatar-khoi{inset:0 auto auto 0}header[data-viewer="parents"] .avatar-nhan{inset:0 0 auto auto}header[data-viewer="parents"] .profile .heading h1{grid-row:3;margin:2px 0 0;max-width:100%;font-size:clamp(22px,6.2vw,25px);white-space:nowrap}header[data-viewer="parents"] .profile-greeting{grid-row:4;margin:0}}
 @media(min-width:1100px){.viewer-bar{right:28px;left:auto}}
+
+/* Give the profile its own row so the full desktop name has enough space. */
+.profile .heading {display:block}
+.profile .heading h1 {text-wrap:balance}
+@media(min-width:1100px){
+ .wrap>header {display:block;padding-bottom:18px}
+ .profile {padding-top:40px;margin:0 0 24px;gap:24px}
+ .profile .heading {flex:1}
+ .profile .heading h1 {font-size:36px;white-space:nowrap;line-height:1.2}
+ .view-switch {width:100%}
+ #profile-greeting {margin:10px 0 0}
+}
