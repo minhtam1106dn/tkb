@@ -22,11 +22,13 @@ import time,re
 root=Path(__file__).resolve().parent.parent
 rows=re.findall(r"\('(shared|khoi|nhan)','([^']+)','([^']+)',(\d+),'2000-01-01'\)",(root/'backend/schema.sql').read_text())
 catalog=[dict(owner=o,task_id=i,name=n,position=int(p),active_from='2000-01-01',retired_on=None,revision=1) for o,i,n,p in rows]
-source='''(()=>{const original=window.fetch;let catalog=CATALOG;window.testRequests=[];window.testRole=null;
+source='''(()=>{const original=window.fetch;let catalog=CATALOG;let schedules={khoi:[],nhan:[]};const scheduleRows=()=>Object.entries(schedules).filter(([role])=>testRole==='parents'||testRole===role).map(([student,days])=>({student,days}));window.testRequests=[];window.testRole=null;
 window.fetch=async(input,options={})=>{const url=String(input);if(!url.includes('supabase.co'))return original(input,options);if(options.method==='OPTIONS')return new Response('{}');const path=new URL(url).pathname,body=options.body?JSON.parse(options.body):{};testRequests.push(path);
 let result=[];let status=200;if(window.testExpire&&path.includes('tkb_snack_fund')){window.testExpire=false;return new Response('{}',{status:401});}
-if(path.includes('tkb-login')){if(body.password==='wrong')return new Response('{}',{status:401});testRole=body.role;result={access_token:'test-token',refresh_token:'test-refresh',user:{id:body.role},bootstrap:{catalog:catalog.filter(t=>body.role==='parents'||t.owner==='shared'||t.owner===body.role),role:body.role,day:body.day,schedules:[],tasks:[],notes:[]}};}
+if(path.includes('tkb-login')){if(body.password==='wrong')return new Response('{}',{status:401});testRole=body.role;result={access_token:'test-token',refresh_token:'test-refresh',user:{id:body.role},bootstrap:{catalog:catalog.filter(t=>body.role==='parents'||t.owner==='shared'||t.owner===body.role),role:body.role,day:body.day,schedules:scheduleRows(),tasks:[],notes:[]}};}
 else if(path.includes('/auth/v1/token')){testRole=JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('tkb-session:')))).role;result={access_token:'test-token',refresh_token:'test-refresh',user:{id:testRole}};}
+else if(path.includes('tkb_save_timetable_day')){if(window.testScheduleFailure)return new Response('{}',{status:503});if(window.testScheduleConflict)return new Response('{}',{status:409});while(schedules[body.p_student].length<=body.p_index)schedules[body.p_student].push({name:'Ngày',school:[],extra:[]});schedules[body.p_student][body.p_index]={...body.p_day,name:['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ nhật'][body.p_index]};result={student:body.p_student,days:schedules[body.p_student]};}
+else if(path.includes('tkb_timetables'))result=scheduleRows();
 else if(path.includes('tkb_profiles'))result=[{role:testRole}];
 else if(path.includes('tkb_reorder_catalog')){let t=catalog.find(x=>x.kind==='order'&&x.owner===body.p_owner&&x.scope===body.p_scope&&x.day===body.p_day);if(t){t.task_ids=body.p_ids;t.revision++;}else catalog.push({kind:'order',owner:body.p_owner,scope:body.p_scope,day:body.p_day,task_ids:body.p_ids,revision:1});result=null;}
 else if(path.includes('tkb_save_daily_catalog')){let t=catalog.find(x=>x.day===body.p_day&&x.owner===body.p_owner&&x.task_id===body.p_task);if(t){t.name=body.p_name;t.removed=body.p_remove;t.revision++;}else catalog.push({day:body.p_day,owner:body.p_owner,task_id:body.p_task,name:body.p_name,removed:body.p_remove,revision:1,position:100});result=null;}
@@ -56,6 +58,35 @@ ev("window.renderSnackFund()")
 check("!testRequests.some(p=>p.includes('tkb_snack_fund'))",'no fund request before authentication')
 login('parents')
 check("currentViewer==='parents' && TKBCloud.role==='parents' && !document.getElementById('viewer-dialog').open",'parent login')
+# Timetable editor: save, cancel, server failures and safe rendering.
+click('[data-view="schedule"]');click('[data-student="khoi"]');click('#edit-timetable');click('[data-edit-day="0"]')
+check("document.getElementById('schedule-editor').open&&document.body.classList.contains('schedule-editor-open')",'schedule editor locks background')
+click('[data-add-lesson="school"]')
+ev("(()=>{const inputs=document.querySelectorAll('#schedule-editor [data-group=school] input');inputs[0].value='Toán <b>an toàn</b>';inputs[0].dispatchEvent(new Event('input'));inputs[1].value='Cô Lan';inputs[1].dispatchEvent(new Event('input'));})()")
+click('[data-add-lesson="second"]')
+ev("(()=>{const inputs=document.querySelectorAll('#schedule-editor [data-group=second] .schedule-edit-row input');inputs[0].value='Mỹ thuật';inputs[0].dispatchEvent(new Event('input'));})()")
+click('[data-add-lesson="extra"]')
+ev("(()=>{const inputs=document.querySelectorAll('#schedule-editor [data-group=extra] input');inputs[2].value='Tiếng Anh';inputs[2].dispatchEvent(new Event('input'));})()")
+click('#schedule-save');time.sleep(.4)
+check("students.khoi.days[0].school[0][0]==='Toán <b>an toàn</b>'&&students.khoi.days[0].extra[0][2]==='Tiếng Anh'&&!document.querySelector('#week b')",'save timetable safely renders school and extra')
+ev("(()=>{const inputs=document.querySelectorAll('#schedule-editor [data-group=extra] input');inputs[1].value='15:00';inputs[1].dispatchEvent(new Event('input'));document.getElementById('schedule-edit-form').requestSubmit()})()")
+check("!document.getElementById('schedule-edit-form').checkValidity()",'invalid extra time rejected')
+ev("(()=>{const inputs=document.querySelectorAll('#schedule-editor [data-group=extra] input');inputs[1].value='18:00';inputs[1].dispatchEvent(new Event('input'));window.testScheduleFailure=true;document.getElementById('schedule-edit-form').requestSubmit()})()");time.sleep(.4)
+check("document.querySelectorAll('#schedule-editor [data-group=extra] input')[1].value==='18:00'&&students.khoi.days[0].extra[0][1]==='17:00'",'failed save retains draft without changing schedule')
+ev("testScheduleFailure=false;testScheduleConflict=true;document.getElementById('schedule-edit-form').requestSubmit()");time.sleep(.4)
+check("document.getElementById('schedule-edit-status').textContent.includes('thiết bị khác')",'concurrent timetable edit reports conflict')
+ev("testScheduleConflict=false")
+for width in [375,393,430,768,1440]:
+ call('Emulation.setDeviceMetricsOverride',{'width':width,'height':812,'deviceScaleFactor':1,'mobile':False})
+ check("document.documentElement.scrollWidth<=innerWidth&&document.getElementById('schedule-editor').scrollWidth<=document.getElementById('schedule-editor').clientWidth",f'schedule editor no overflow {width}')
+click('#schedule-cancel')
+check("!document.body.classList.contains('schedule-editor-open')&&students.khoi.days[0].extra[0][1]==='17:00'",'cancel discards unsaved timetable changes')
+click('#edit-timetable');click('[data-edit-child="nhan"]');click('[data-edit-day="6"]');click('[data-add-lesson="school"]')
+ev("const i=document.querySelector('#schedule-editor [data-group=school] input');i.value='Đọc sách';i.dispatchEvent(new Event('input'));document.getElementById('schedule-edit-form').requestSubmit()");time.sleep(.4)
+check("students.nhan.days[6].school[0][0]==='Đọc sách'&&students.khoi.days[0].school[0][0]==='Toán <b>an toàn</b>'",'edit Nhan Sunday independently')
+click('#schedule-close')
+# End timetable editor tests.
+
 click('#change-viewer');check("TKBCloud.role==='parents' && !document.getElementById('viewer-cancel').hidden",'switch keeps authenticated session')
 login('nhan','wrong');check("currentViewer==='parents'&&TKBCloud.role==='parents'",'failed switch preserves current viewer')
 click('#viewer-cancel');check("!document.getElementById('viewer-dialog').open&&currentViewer==='parents'",'cancel returns to parent')
@@ -167,6 +198,7 @@ for width in [1100,1280,1440]:
  call('Emulation.setDeviceMetricsOverride',{'width':width,'height':900,'deviceScaleFactor':1,'mobile':False})
  check("(()=>{const r=document.createRange();r.selectNodeContents(document.getElementById('student-name'));return r.getClientRects().length===1&&document.documentElement.scrollWidth<=innerWidth})()",f'desktop name one line {width}')
 click('[data-view="checklist"]');check("document.getElementById('task-management').hidden",'child cannot manage catalog')
+check("document.getElementById('edit-timetable').hidden",'child cannot edit timetable')
 check("document.querySelectorAll('#private-tasks li').length===6",'Khoi private tasks')
 click('#change-viewer');login('nhan');click('[data-view="checklist"]')
 check("document.querySelectorAll('#private-tasks li').length===5",'Nhan private tasks')

@@ -31,6 +31,43 @@ drop policy if exists tkb_read_timetable on public.tkb_timetables;
 create policy tkb_read_timetable on public.tkb_timetables for select to authenticated
  using (tkb_private.viewer_role() = 'parents' or student = tkb_private.viewer_role());
 
+-- Parents edit one weekday with optimistic concurrency; children keep read-only access.
+create or replace function public.tkb_save_timetable_day(p_student text,p_index integer,p_day jsonb,p_expected jsonb)
+returns public.tkb_timetables language plpgsql security definer set search_path='' as $$
+declare saved public.tkb_timetables%rowtype; item jsonb; group_name text; slots jsonb; clean jsonb;
+ names text[] := array['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ nhật'];
+begin
+ if tkb_private.viewer_role() is distinct from 'parents' then raise exception 'Not allowed' using errcode='42501'; end if;
+ if p_student is null or p_student not in ('khoi','nhan') or p_index is null or p_index not between 0 and 6 or p_day is null or jsonb_typeof(p_day)<>'object' then raise exception 'Invalid day'; end if;
+ foreach group_name in array array['school','second','extra'] loop
+  slots:=p_day->group_name;
+  if slots is null or jsonb_typeof(slots)<>'array' then raise exception 'Invalid lessons'; end if;
+  if jsonb_array_length(slots)>12 then raise exception 'Too many lessons'; end if;
+  for item in select value from jsonb_array_elements(slots) loop
+   if group_name<>'extra' and item='null'::jsonb then continue; end if;
+   if jsonb_typeof(item)<>'array' then raise exception 'Invalid lesson'; end if;
+   if group_name='extra' then
+    if jsonb_array_length(item)<>3 or jsonb_typeof(item->0)<>'string' or jsonb_typeof(item->1)<>'string' or jsonb_typeof(item->2)<>'string' or (item->>0)!~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' or (item->>1)!~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' or (item->>0)>=(item->>1) or length(btrim(item->>2)) not between 1 and 160 then raise exception 'Invalid extra lesson'; end if;
+   else
+    if jsonb_array_length(item)<>2 or jsonb_typeof(item->0)<>'string' or jsonb_typeof(item->1)<>'string' or length(btrim(item->>0)) not between 1 and 100 or length(item->>1)>100 then raise exception 'Invalid school lesson'; end if;
+   end if;
+  end loop;
+ end loop;
+ if coalesce(p_day->>'secondStart','')!~ '^([1-9]|1[0-2])$' then raise exception 'Invalid period number'; end if;
+ if (p_day->>'secondStart')::integer+jsonb_array_length(p_day->'second')-1>12 then raise exception 'Invalid period range'; end if;
+ select * into saved from public.tkb_timetables where student=p_student for update;
+ if not found then raise exception 'Missing timetable'; end if;
+ if (saved.days->p_index) is distinct from nullif(p_expected,'null'::jsonb) then raise exception 'Timetable changed' using errcode='40001'; end if;
+ clean:=jsonb_build_object('name',names[p_index+1],'school',p_day->'school','second',p_day->'second','secondStart',(p_day->>'secondStart')::integer,'extra',p_day->'extra');
+ while jsonb_array_length(saved.days)<=p_index loop
+  saved.days:=saved.days||jsonb_build_array(jsonb_build_object('name',names[jsonb_array_length(saved.days)+1],'school','[]'::jsonb,'extra','[]'::jsonb));
+ end loop;
+ update public.tkb_timetables set days=jsonb_set(saved.days,array[p_index::text],clean) where student=p_student returning * into saved;
+ return saved;
+end $$;
+revoke all on function public.tkb_save_timetable_day(text,integer,jsonb,jsonb) from public,anon;
+grant execute on function public.tkb_save_timetable_day(text,integer,jsonb,jsonb) to authenticated;
+
 create table if not exists public.tkb_tasks (
  day date not null,
  owner text not null check (owner in ('shared','khoi','nhan')),

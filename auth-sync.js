@@ -6,7 +6,7 @@
  let state={days:{},queue:[]},storageKey='',refreshing=null,flushing=null,pulling=null;
  const listeners=new Set();
  const emit=()=>listeners.forEach(fn=>fn());
- const empty=()=>({days:{},queue:[],leaderboards:{},notes:{},fund:[],catalog:[]});
+ const empty=()=>({days:{},queue:[],leaderboards:{},notes:{},fund:[],catalog:[],schedules:[]});
  function savedSession(){
   try{
    const saved=JSON.parse(localStorage.getItem(sessionKey));
@@ -26,6 +26,7 @@
   if(!next.notes || typeof next.notes!=='object')next.notes={};
   if(!Array.isArray(next.fund))next.fund=[];
   if(!Array.isArray(next.catalog))next.catalog=[];
+  if(!Array.isArray(next.schedules))next.schedules=[];
   state=next;
  }
  function persist(){localStorage.setItem(storageKey,JSON.stringify(state));}
@@ -95,14 +96,15 @@
  async function pull(day=activeDay){
   if(!profile || !day || !navigator.onLine)return;
   const version=generation;
-  const [rows,notes,catalog]=await Promise.all([
+  const [rows,notes,catalog,schedules]=await Promise.all([
    api(`/rest/v1/tkb_tasks?day=eq.${encodeURIComponent(day)}&select=*`),
    api(`/rest/v1/tkb_parent_notes?day=eq.${encodeURIComponent(day)}&select=day,child,message,updated_at`),
-   api("/rest/v1/rpc/tkb_catalog_entries")
+   api("/rest/v1/rpc/tkb_catalog_entries"),
+   api("/rest/v1/tkb_timetables?select=student,days")
   ]);
   await lock(()=>{
    if(version!==generation)return;
-   load();state.catalog=catalog;for(const row of rows)cacheRow(row);
+   load();state.catalog=catalog;state.schedules=schedules;for(const row of rows)cacheRow(row);
    for(const child of ['khoi','nhan'])delete state.notes[`${day}:${child}`];
    for(const note of notes)state.notes[`${note.day}:${note.child}`]=note;
    persist();
@@ -196,7 +198,7 @@
     schedules=loadedSchedules;rows=loadedRows;notes=loadedNotes;catalog=loadedCatalog;
    }
    if(!Array.isArray(catalog))catalog=await api('/rest/v1/rpc/tkb_catalog_entries');
-   await lock(()=>{load();state.catalog=catalog;persist();});
+   await lock(()=>{load();state.catalog=catalog;state.schedules=schedules;persist();});
    if(rows.length || notes.length)await lock(()=>{load();for(const row of rows)cacheRow(row);for(const note of notes)state.notes[`${note.day}:${note.child}`]=note;persist();});
    status=state.queue.length?'Đang đồng bộ':'Đã đồng bộ';
    persistSession();
@@ -310,12 +312,22 @@
   const rank=new Map((order?.task_ids||[]).map((id,i)=>[id,i]));
   return [...items.values()].sort((a,b)=>(rank.get(a.task_id)??10000)-(rank.get(b.task_id)??10000)||(a.position??100)-(b.position??100)||a.task_id.localeCompare(b.task_id));
  }
+ async function saveTimetableDay(student,index,day,expected){
+  if(profile?.role!=='parents')throw new Error('Chỉ Ba Mẹ được sửa thời khóa biểu.');
+  const version=generation;
+  let saved;
+  try{saved=await api('/rest/v1/rpc/tkb_save_timetable_day',{p_student:student,p_index:index,p_day:day,p_expected:expected});}
+  catch(error){if(error.httpStatus===409){await sync();throw new Error('Lịch ngày này đã thay đổi trên thiết bị khác. Đóng rồi mở lại để lấy lịch mới; bản nhập của bạn chưa được lưu.');}if(error.httpStatus===403)throw error;throw new Error('Chưa lưu được thời khóa biểu. Kiểm tra kết nối rồi bấm Lưu lại; nội dung đang nhập vẫn được giữ.');}
+  await lock(()=>{if(version!==generation)return;load();state.schedules=state.schedules.filter(row=>row.student!==student).concat(saved);persist();});
+  if(version===generation)emit();
+  return saved;
+ }
  async function reorderCatalog(owner,scope,day,ids,revision){
   if(profile?.role!=='parents')throw new Error('Chỉ Ba Mẹ được sắp xếp công việc.');
   await api('/rest/v1/rpc/tkb_reorder_catalog',{p_owner:owner,p_scope:scope,p_day:day,p_ids:ids,p_revision:revision});
   await pull();
  }
- window.TKBCloud={reorderCatalog,orderRevision(owner,scope,day){return (state.catalog||[]).find(t=>t.kind==='order'&&t.owner===owner&&t.scope===scope&&t.day===day)?.revision||0;},catalogForDay,saveCatalog,getCatalog(){return profile?state.catalog.filter(t=>!t.kind):[];},login,restore,logout,save,saveParentNote,loadSnackFund,addSnackTransaction,deleteSnackTransaction,sync,warmup,loadRange,loadLeaderboard,
+ window.TKBCloud={saveTimetableDay,getSchedules(){return profile?state.schedules:[];},reorderCatalog,orderRevision(owner,scope,day){return (state.catalog||[]).find(t=>t.kind==='order'&&t.owner===owner&&t.scope===scope&&t.day===day)?.revision||0;},catalogForDay,saveCatalog,getCatalog(){return profile?state.catalog.filter(t=>!t.kind):[];},login,restore,logout,save,saveParentNote,loadSnackFund,addSnackTransaction,deleteSnackTransaction,sync,warmup,loadRange,loadLeaderboard,
   get role(){return profile?.role;},get status(){return status;},
   getRows(from,to){return profile?rowsBetween(from,to):[];},
   getSnackFund(){return profile?state.fund:[];},

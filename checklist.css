@@ -83,3 +83,26 @@ body.task-editor-open {position:fixed;top:var(--task-editor-page-top);left:0;wid
 
 /* One child uses the full row; the parent view retains its two cards. */
 @media(min-width:700px){.today-grid>.today-card:only-child{grid-column:1 / -1}}
+
+#edit-timetable{margin-bottom:16px}
+#schedule-editor{position:fixed;width:min(820px,calc(100% - 24px));max-height:90dvh;overflow:auto;overscroll-behavior:contain;border:0;border-radius:24px;padding:24px;background:#fff;color:var(--text);box-sizing:border-box}
+#schedule-editor::backdrop{background:#14244766}
+.schedule-editor-heading,.schedule-editor-actions{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.schedule-editor-heading h2{font-size:22px}
+#schedule-editor p{line-height:1.5}
+.schedule-choices{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+#schedule-editor button{min-height:44px;min-width:44px}
+#schedule-editor button[aria-pressed=true],#schedule-save{background:#2867ee;color:#fff;border-color:#2867ee}
+#schedule-editor fieldset{min-width:0;border:1px solid #dce8f5;border-radius:14px;padding:14px;margin:18px 0}
+#schedule-editor legend{font-weight:750;padding:0 6px}
+.schedule-edit-row{display:grid;gap:10px;padding:14px 0;border-top:1px solid #e1e8f2;margin-bottom:10px}
+#schedule-editor label{display:grid;gap:6px;min-width:0;font-size:14px;font-weight:600}
+#schedule-editor input{width:100%;min-width:0;min-height:44px;border:1px solid #94a3b8;border-radius:10px;padding:8px;font:inherit;box-sizing:border-box;background:#fff;color:var(--text)}
+#schedule-editor input[type=time]{padding:0 4px;max-width:100%}
+#schedule-editor .schedule-start{max-width:180px;margin-bottom:12px}
+.schedule-editor-actions{justify-content:flex-start;flex-wrap:wrap;margin-top:16px}
+#schedule-editor :focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+#schedule-editor button:disabled,#schedule-editor input:disabled{opacity:.6}
+html.schedule-editor-open{overflow:hidden;overscroll-behavior:none}
+body.schedule-editor-open{position:fixed;top:var(--schedule-page-top);left:0;width:100%;overflow:hidden}
+@media(min-width:600px){.schedule-edit-row{grid-template-columns:repeat(2,minmax(0,1fr));align-items:end}.schedule-edit-row>strong{grid-column:1/-1}.schedule-edit-row>button{justify-self:start}}

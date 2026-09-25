@@ -85,7 +85,7 @@ h1 strong{font-weight:inherit}.students{display:flex;flex-wrap:wrap;gap:8px;marg
 <details class="score-rules"><summary>Cách tính điểm</summary><ul><li>Việc riêng: tối đa 60 điểm mỗi ngày, tính theo tỷ lệ hoàn thành.</li><li>Việc chung: 10 điểm cho mỗi mục, tính cho người hoàn thành.</li><li>Hoàn thành sớm: trước 19h +3, trước 20h +2, trước 21h +1; tối đa 15 điểm mỗi ngày.</li><li>Hoàn thành đủ việc riêng: thưởng thêm 10 điểm mỗi ngày.</li><li>“Không có bài” được tính hoàn thành nhưng không nhận điểm hoàn thành sớm.</li></ul></details>
 </section>
 <section id="schedule" aria-labelledby="schedule-title" hidden>
-<div class="panel-toolbar"><h2 id="schedule-title" class="title-with-icon"><span class="section-icon purple"><svg aria-hidden="true"><use href="#i-book"/></svg></span>Lịch học trong tuần</h2><div class="filters" role="group" aria-label="Lọc lịch học"><button data-filter="all" aria-pressed="true">Tất cả</button><button data-filter="school" aria-pressed="false">Ở trường</button><button data-filter="extra" aria-pressed="false">Học thêm</button></div></div><div class="legend panel-meta"><span><i class="dot" aria-hidden="true"></i>Ở trường</span><span><i class="dot extra" aria-hidden="true"></i>Học thêm</span></div>
+<div class="panel-toolbar"><h2 id="schedule-title" class="title-with-icon"><span class="section-icon purple"><svg aria-hidden="true"><use href="#i-book"/></svg></span>Lịch học trong tuần</h2><div class="filters" role="group" aria-label="Lọc lịch học"><button data-filter="all" aria-pressed="true">Tất cả</button><button data-filter="school" aria-pressed="false">Ở trường</button><button data-filter="extra" aria-pressed="false">Học thêm</button></div></div><button id="edit-timetable" type="button" hidden>Chỉnh thời khóa biểu</button><div class="legend panel-meta"><span><i class="dot" aria-hidden="true"></i>Ở trường</span><span><i class="dot extra" aria-hidden="true"></i>Học thêm</span></div>
 <div id="week" class="week"></div>
 <noscript><p>Vui lòng bật JavaScript để xem thời khóa biểu.</p></noscript>
 </section>
@@ -129,6 +129,7 @@ try {
 
 // Preserve period numbers from each school timetable; bell times were not provided.
 const currentDay = Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',weekday:'short'}).format(new Date()).replace(/Sun|Mon|Tue|Wed|Thu|Fri|Sat/g, d=>({Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[d])));
+function escapeText(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function renderToday(){
  const now=new Date();
  const weekday=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',weekday:'short'}).format(now).replace(/Sun|Mon|Tue|Wed|Thu|Fri|Sat/g,d=>({Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[d])));
@@ -141,23 +142,29 @@ function renderToday(){
  noteBox.hidden=!todayNote;document.getElementById('today-parent-note-message').textContent=todayNote?.message||'';
  document.getElementById('today-summary').hidden=currentViewer!=='parents';
  document.getElementById('today-summary').innerHTML=visible.map(key=>{
-  const student=students[key],day=student.days[weekday-1];
-  return `<article class="today-snapshot"><div class="snapshot-heading"><img src="./assets/characters/${key==='khoi'?'khoi-avatar':'nhan-avatar'}.png" alt=""><h3>${student.name.replace('Nguyễn ','')}</h3></div><p><strong>Ở trường:</strong> ${day?(day.school?.length||0)+(day.second?.length||0)+' tiết':'Không có lịch'}</p><p><strong>Học thêm:</strong> ${day?.extra?.length?day.extra.map(item=>`${item[0]}–${item[1]} ${item[2]}`).join(' · '):'Không có'}</p></article>`;
+  const student=students[key],day=student.days[(weekday+6)%7];
+  return `<article class="today-snapshot"><div class="snapshot-heading"><img src="./assets/characters/${key==='khoi'?'khoi-avatar':'nhan-avatar'}.png" alt=""><h3>${student.name.replace('Nguyễn ','')}</h3></div><p><strong>Ở trường:</strong> ${day?(day.school?.filter(Boolean).length||0)+(day.second?.filter(Boolean).length||0)+' tiết':'Không có lịch'}</p><p><strong>Học thêm:</strong> ${day?.extra?.length?day.extra.map(item=>`${escapeText(item[0])}–${escapeText(item[1])} ${escapeText(item[2])}`).join(' · '):'Không có'}</p></article>`;
  }).join('');
  document.getElementById('today-content').innerHTML=visible.map(key=>{
-  const student=students[key],day=student.days[weekday-1];
+  const student=students[key],day=student.days[(weekday+6)%7];
   if(!day)return `<article class="today-card"><h3>${student.name.replace('Nguyễn ','')}</h3><p class="today-empty">Hôm nay không có lịch học.</p></article>`;
   const extras=day.extra||[];
-  const school=(items,start)=>items?.length?`<ol class="today-periods">${items.map((item,i)=>item?`<li><span>Tiết ${start+i}</span><strong>${item[0]}</strong></li>`:'').join('')}</ol>`:'';
-  return `<article class="today-card"><div class="today-card-head"><div class="today-card-person"><span class="card-icon"><svg aria-hidden="true"><use href="#i-book"/></svg></span><div><h3>${currentViewer==='parents'?student.name.replace('Nguyễn ',''):'Lịch học hôm nay'}</h3><span>${currentViewer==='parents'?`Lớp ${student.className}`:student.name.replace('Nguyễn ','')}</span></div></div><span class="today-count">${extras.length} buổi học thêm</span></div><section class="today-extra"><h4>Học thêm hôm nay</h4>${extras.length?`<ul>${extras.map(item=>`<li><strong>${item[0]}–${item[1]}</strong><span>${item[2]}</span></li>`).join('')}</ul>`:'<p>Không có lịch học thêm.</p>'}</section><div class="today-school"><section><h4>Ở trường · Sáng</h4>${school(day.school,1)||'<p>Không có tiết học.</p>'}</section>${day.second?.length?`<section><h4>Ở trường · Chiều</h4>${school(day.second,day.secondStart||1)}</section>`:''}</div></article>`;
+  const school=(items,start)=>items?.length?`<ol class="today-periods">${items.map((item,i)=>item?`<li><span>Tiết ${start+i}</span><strong>${escapeText(item[0])}</strong></li>`:'').join('')}</ol>`:'';
+  return `<article class="today-card"><div class="today-card-head"><div class="today-card-person"><span class="card-icon"><svg aria-hidden="true"><use href="#i-book"/></svg></span><div><h3>${currentViewer==='parents'?student.name.replace('Nguyễn ',''):'Lịch học hôm nay'}</h3><span>${currentViewer==='parents'?`Lớp ${student.className}`:student.name.replace('Nguyễn ','')}</span></div></div><span class="today-count">${extras.length} buổi học thêm</span></div><section class="today-extra"><h4>Học thêm hôm nay</h4>${extras.length?`<ul>${extras.map(item=>`<li><strong>${escapeText(item[0])}–${escapeText(item[1])}</strong><span>${escapeText(item[2])}</span></li>`).join('')}</ul>`:'<p>Không có lịch học thêm.</p>'}</section><div class="today-school"><section><h4>Ở trường · Sáng</h4>${school(day.school,1)||'<p>Không có tiết học.</p>'}</section>${day.second?.length?`<section><h4>Ở trường · Chiều</h4>${school(day.second,day.secondStart||1)}</section>`:''}</div></article>`;
  }).join('');
 }
 window.renderToday=renderToday;
-window.TKBCloud?.subscribe(()=>{if(currentViewer)renderToday();});
-function periods(items, start=1){return '<ol class="periods">'+items.map((item,i)=>item?`<li value="${i+start}"><span class="period-number" aria-label="Tiết ${i+start}">${i+start}</span><div class="subject">${item[0]}${item[1]?`<span class="teacher">${item[1]}</span>`:''}</div></li>`:'').join('')+'</ol>';}
+window.TKBCloud?.subscribe(()=>{
+ if(!currentViewer || window.TKBCloud.role!==currentViewer)return;
+ let changed=false;
+ for(const row of window.TKBCloud.getSchedules())if(students[row.student]&&JSON.stringify(students[row.student].days)!==JSON.stringify(row.days)){students[row.student].days=row.days;changed=true;}
+ if(changed)render();else renderToday();
+});
+function periods(items, start=1){return '<ol class="periods">'+items.map((item,i)=>item?`<li value="${i+start}"><span class="period-number" aria-label="Tiết ${i+start}">${i+start}</span><div class="subject">${escapeText(item[0])}${item[1]?`<span class="teacher">${escapeText(item[1])}</span>`:''}</div></li>`:'').join('')+'</ol>';}
 function render(){
  if (currentViewer && currentViewer !== 'parents') selectedStudent=currentViewer;
  const familyDashboard=currentViewer==='parents';
+ document.getElementById('edit-timetable').hidden=!familyDashboard;
  document.querySelector('.students').hidden=currentViewer!=='parents' || (document.getElementById('schedule').hidden && document.getElementById('checklist').hidden);
  const student = students[selectedStudent];
  const filter = selectedFilter;
@@ -172,10 +179,10 @@ function render(){
  document.title = familyDashboard?'Góc học tập · Thanh Khôi & Thanh Nhân':`Góc học tập · ${student.name}`;
  document.querySelectorAll('[data-student]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.student === selectedStudent)));
  document.querySelectorAll('[data-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.filter === filter)));
- document.getElementById('week').innerHTML=student.days.map((day,i)=>`<article class="day ${currentDay===i+1?'today':''}" aria-labelledby="day-${i}">
- <div class="day-head"><h3 id="day-${i}">${day.name}</h3>${currentDay===i+1?'<span class="today-badge">Hôm nay</span>':''}</div>
- ${filter!=='extra'?`${day.school.length?`<section class="group"><h4 class="group-title">Ở trường · Sáng</h4>${periods(day.school)}</section>`:''}${day.second?`<section class="group"><h4 class="group-title">Ở trường · Chiều</h4>${periods(day.second,day.secondStart || 1)}</section>`:''}${!day.school.length&&!day.second?'<section class="group"><h4 class="group-title">Ở trường</h4><p class="empty">Không có lịch ở trường</p></section>':''}`:''}
- ${filter!=='school'?`<section class="group extra-group"><h4 class="group-title">Học thêm</h4>${day.extra.length?'<ul class="lessons">'+day.extra.map(lesson=>`<li><time>${lesson[0]} – ${lesson[1]}</time><div class="subject">${lesson[2]}</div></li>`).join('')+'</ul>':'<p class="empty">Không có lịch học thêm</p>'}</section>`:''}</article>`).join('');
+ document.getElementById('week').innerHTML=student.days.map((day,i)=>`<article class="day ${(currentDay+6)%7===i?'today':''}" aria-labelledby="day-${i}">
+ <div class="day-head"><h3 id="day-${i}">${escapeText(day.name)}</h3>${(currentDay+6)%7===i?'<span class="today-badge">Hôm nay</span>':''}</div>
+ ${filter!=='extra'?`${day.school.length?`<section class="group"><h4 class="group-title">Ở trường · Sáng</h4>${periods(day.school)}</section>`:''}${day.second?.length?`<section class="group"><h4 class="group-title">Ở trường · Chiều</h4>${periods(day.second,day.secondStart || 1)}</section>`:''}${!day.school.length&&!day.second?.length?'<section class="group"><h4 class="group-title">Ở trường</h4><p class="empty">Không có lịch ở trường</p></section>':''}`:''}
+ ${filter!=='school'?`<section class="group extra-group"><h4 class="group-title">Học thêm</h4>${day.extra.length?'<ul class="lessons">'+day.extra.map(lesson=>`<li><time>${escapeText(lesson[0])} – ${escapeText(lesson[1])}</time><div class="subject">${escapeText(lesson[2])}</div></li>`).join('')+'</ul>':'<p class="empty">Không có lịch học thêm</p>'}</section>`:''}</article>`).join('');
  renderToday();window.renderChecklist?.();window.renderDashboard?.();
 }
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{selectedFilter=button.dataset.filter;render();}));
@@ -277,6 +284,7 @@ if ('serviceWorker'  in navigator) {
 </script>
 <script src="./checklist.js"></script>
 <script src="./task-manager.js"></script>
+<script src="./schedule-editor.js"></script>
 <script src="./dashboard.js"></script>
 <script src="./leaderboard.js"></script>
 <script src="./snack-fund.js"></script>
