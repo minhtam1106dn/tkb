@@ -75,3 +75,8 @@ html{scrollbar-gutter:stable}.panel-toolbar{display:grid;grid-template-columns:m
 #task-editor .catalog-drag:active {cursor:grabbing;transform:none}
 #catalog-sort-help {font-size:13px;color:#526581}
 @media(min-width:600px){#catalog-list li {grid-template-columns:44px minmax(0,1fr) auto}.catalog-row-actions {grid-column:3;grid-row:1}}
+
+/* Keep touch/wheel scrolling inside the task dialog, never behind it. */
+html.task-editor-open {overflow:hidden;overscroll-behavior:none}
+body.task-editor-open {position:fixed;top:var(--task-editor-page-top);left:0;width:100%;overflow:hidden}
+#task-editor {position:fixed;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}

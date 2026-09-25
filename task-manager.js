@@ -3,6 +3,26 @@
  const dialog=document.createElement('dialog');dialog.id='task-editor';dialog.setAttribute('aria-labelledby','task-editor-title');
  dialog.innerHTML=`<div class="catalog-heading"><h2 id="task-editor-title">Quản lý công việc</h2><button type="button" id="catalog-close">Đóng</button></div><label for="catalog-scope">Áp dụng</label><select id="catalog-scope"><option value="day">Chỉ ngày đang xem</option><option value="future">Từ hôm nay về sau</option></select><p id="catalog-scope-note"></p><label for="task-owner">Nhóm công việc</label><select id="task-owner"><option value="shared">Việc chung</option><option value="khoi">Việc riêng · Khôi</option><option value="nhan">Việc riêng · Nhân</option></select><form id="catalog-form"><label for="catalog-name">Tên công việc</label><input id="catalog-name" maxlength="160" required><div class="catalog-actions"><button type="submit" id="catalog-save">Thêm công việc</button><button type="button" id="catalog-reset" hidden>Hủy sửa</button></div></form><p id="catalog-status" role="status"></p><p id="catalog-sort-help">Kéo tay nắm để đổi thứ tự, hoặc dùng nút lên/xuống.</p><ul id="catalog-list"></ul>`;
  document.body.append(dialog);
+ // Fix the page in place while the modal owns scrolling, including on mobile.
+ let pageScroll=null;
+ function lockPageScroll(){
+  if(pageScroll)return;
+  pageScroll={x:window.scrollX,y:window.scrollY,offset:document.body.style.getPropertyValue('--task-editor-page-top')};
+  document.body.style.setProperty('--task-editor-page-top',`${-pageScroll.y}px`);
+  document.documentElement.classList.add('task-editor-open');
+  document.body.classList.add('task-editor-open');
+ }
+ function unlockPageScroll(){
+  if(!pageScroll)return;
+  const saved=pageScroll;pageScroll=null;
+  document.documentElement.classList.remove('task-editor-open');
+  document.body.classList.remove('task-editor-open');
+  if(saved.offset)document.body.style.setProperty('--task-editor-page-top',saved.offset);
+  else document.body.style.removeProperty('--task-editor-page-top');
+  window.scrollTo({left:saved.x,top:saved.y,behavior:'instant'});
+ }
+ function closeEditor(){dialog.close();unlockPageScroll();}
+ dialog.addEventListener('close',()=>{if(!dialog.open)unlockPageScroll();});
  const $=id=>document.getElementById(id);let editing=null,busy=false,selectedDay=null,drag=null;
  let renderedTasks=[],renderedRevision=0;
  const daily=()=>$('catalog-scope').value==='day';
@@ -100,7 +120,7 @@
  $('catalog-form').onsubmit=event=>{event.preventDefault();if(!$('catalog-name').value.trim()){$('catalog-status').textContent='Nhập tên công việc.';return;}void save(editing||{owner:$('task-owner').value,task_id:crypto.randomUUID(),revision:0});};
  $('catalog-scope').onchange=()=>{reset();$('catalog-status').textContent='';render();};
  $('task-owner').onchange=()=>{reset();render();};$('catalog-reset').onclick=reset;
- $('catalog-close').onclick=()=>dialog.close();dialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
- $('manage-tasks').onclick=()=>{if(window.TKBCloud.role!=='parents')return;selectedDay=$('checklist-date').value||day();$('catalog-scope').value='day';$('catalog-scope').dispatchEvent(new Event('change'));reset();$('catalog-status').textContent='';render();dialog.showModal();};
- window.TKBCloud.subscribe(()=>{if(dialog.open){if(window.TKBCloud.role!=='parents')dialog.close();else render();}});
+ $('catalog-close').onclick=closeEditor;dialog.addEventListener('cancel',event=>{event.preventDefault();if(!busy)closeEditor();});
+ $('manage-tasks').onclick=()=>{if(window.TKBCloud.role!=='parents')return;selectedDay=$('checklist-date').value||day();$('catalog-scope').value='day';$('catalog-scope').dispatchEvent(new Event('change'));reset();$('catalog-status').textContent='';render();lockPageScroll();try{dialog.showModal();dialog.scrollTop=0;}catch(error){unlockPageScroll();throw error;}};
+ window.TKBCloud.subscribe(()=>{if(dialog.open){if(window.TKBCloud.role!=='parents')closeEditor();else render();}});
 })();
